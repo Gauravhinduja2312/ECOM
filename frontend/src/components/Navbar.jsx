@@ -20,16 +20,15 @@ export default function Navbar() {
           <Link to="/cart" className="text-slate-700 hover:text-slate-900">
             Cart ({items.length})
           </Link>
-          {profile && (
-            <Link to="/dashboard" className="text-slate-700 hover:text-slate-900">
-              Dashboard
-            </Link>
-          )}
-          {profile?.role === 'admin' && (
+          {profile?.role === 'admin' ? (
             <Link to="/admin" className="text-slate-700 hover:text-slate-900">
               Admin
             </Link>
-          )}
+          ) : profile ? (
+            <Link to="/dashboard" className="text-slate-700 hover:text-slate-900">
+              Dashboard
+            </Link>
+          ) : null}
           {!profile ? (
             <Link to="/auth" className="rounded-md bg-slate-900 px-3 py-2 text-white">
               Login

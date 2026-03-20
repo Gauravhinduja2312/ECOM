@@ -11,6 +11,7 @@ import CheckoutPage from './pages/CheckoutPage';
 import OrderSuccessPage from './pages/OrderSuccessPage';
 import UserDashboardPage from './pages/UserDashboardPage';
 import AdminDashboardPage from './pages/AdminDashboardPage';
+import AddProductPage from './pages/AddProductPage';
 import NotFoundPage from './pages/NotFoundPage';
 
 function App() {
@@ -53,6 +54,14 @@ function App() {
             element={
               <AdminRoute>
                 <AdminDashboardPage />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/add-product"
+            element={
+              <AdminRoute>
+                <AddProductPage />
               </AdminRoute>
             }
           />
