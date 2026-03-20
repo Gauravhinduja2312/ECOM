@@ -1,0 +1,19 @@
+{
+  "name": "student-marketplace-functions",
+  "private": true,
+  "main": "index.js",
+  "engines": {
+    "node": "20"
+  },
+  "scripts": {
+    "serve": "firebase emulators:start --only functions",
+    "deploy": "firebase deploy --only functions"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.99.3",
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "firebase-functions": "^6.6.0",
+    "razorpay": "^2.9.6"
+  }
+}
