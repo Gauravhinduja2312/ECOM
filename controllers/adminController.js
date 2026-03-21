@@ -92,18 +92,18 @@ async function getProductSubmissions(req, res) {
 
     const sellerIds = [...new Set((products || []).map((product) => product.seller_id).filter(Boolean))];
 
-    let sellerEmailById = {};
+    let sellerMetaById = {};
     if (sellerIds.length) {
       const { data: sellers, error: sellersError } = await supabaseAdmin
         .from('users')
-        .select('id, email')
+        .select('id, email, upi_id, upi_qr_url')
         .in('id', sellerIds);
 
       if (sellersError) {
         return res.status(500).json({ error: sellersError.message });
       }
 
-      sellerEmailById = Object.fromEntries((sellers || []).map((seller) => [seller.id, seller.email]));
+      sellerMetaById = Object.fromEntries((sellers || []).map((seller) => [seller.id, seller]));
     }
 
     const submissions = (products || []).map((product) => ({
@@ -249,9 +249,12 @@ async function getSellerPayouts(req, res) {
       }
 
       if (!payoutMap[sellerId]) {
+        const sellerMeta = sellerMetaById[sellerId] || {};
         payoutMap[sellerId] = {
           seller_id: sellerId,
-          seller_email: sellerEmailById[sellerId] || null,
+          seller_email: sellerMeta.email || null,
+          seller_upi_id: sellerMeta.upi_id || null,
+          seller_upi_qr_url: sellerMeta.upi_qr_url || null,
           total_earning: 0,
           total_paid: 0,
           total_unpaid: 0,
