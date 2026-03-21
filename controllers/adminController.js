@@ -83,6 +83,7 @@ async function getProductSubmissions(req, res) {
       .from('products')
       .select('id, name, description, price, category, stock, seller_id, verification_status, admin_review_note, proposed_price, price_offer_status, final_price, commission_rate, created_at, updated_at')
       .not('seller_id', 'is', null)
+      .order('verification_status', { ascending: false })
       .order('created_at', { ascending: false });
 
     if (productsError) {
@@ -210,8 +211,166 @@ async function reviewProductSubmission(req, res) {
   }
 }
 
+async function getSellerPayouts(req, res) {
+  try {
+    const { data: orderItems, error: orderItemsError } = await supabaseAdmin
+      .from('order_items')
+      .select('id, order_id, product_id, seller_earning, payout_status, payout_paid_at, payout_reference, order:orders(id, status, created_at), product:products(id, name, seller_id)')
+      .gt('seller_earning', 0);
+
+    if (orderItemsError) {
+      return res.status(500).json({ error: orderItemsError.message });
+    }
+
+    const sellerIds = [...new Set((orderItems || [])
+      .map((item) => item.product?.seller_id)
+      .filter(Boolean))];
+
+    let sellerEmailById = {};
+    if (sellerIds.length) {
+      const { data: sellers, error: sellersError } = await supabaseAdmin
+        .from('users')
+        .select('id, email')
+        .in('id', sellerIds);
+
+      if (sellersError) {
+        return res.status(500).json({ error: sellersError.message });
+      }
+
+      sellerEmailById = Object.fromEntries((sellers || []).map((seller) => [seller.id, seller.email]));
+    }
+
+    const payoutMap = {};
+
+    (orderItems || []).forEach((item) => {
+      const sellerId = item.product?.seller_id;
+      if (!sellerId) {
+        return;
+      }
+
+      if (!payoutMap[sellerId]) {
+        payoutMap[sellerId] = {
+          seller_id: sellerId,
+          seller_email: sellerEmailById[sellerId] || null,
+          total_earning: 0,
+          total_paid: 0,
+          total_unpaid: 0,
+          unpaid_count: 0,
+          paid_count: 0,
+          items: [],
+        };
+      }
+
+      const earning = Number(item.seller_earning || 0);
+      const status = item.payout_status || 'unpaid';
+
+      payoutMap[sellerId].total_earning += earning;
+
+      if (status === 'paid') {
+        payoutMap[sellerId].total_paid += earning;
+        payoutMap[sellerId].paid_count += 1;
+      } else {
+        payoutMap[sellerId].total_unpaid += earning;
+        payoutMap[sellerId].unpaid_count += 1;
+      }
+
+      payoutMap[sellerId].items.push({
+        order_item_id: item.id,
+        order_id: item.order_id,
+        product_id: item.product_id,
+        product_name: item.product?.name || `Product #${item.product_id}`,
+        order_status: item.order?.status || null,
+        order_created_at: item.order?.created_at || null,
+        seller_earning: earning,
+        payout_status: status,
+        payout_paid_at: item.payout_paid_at || null,
+        payout_reference: item.payout_reference || null,
+      });
+    });
+
+    const payouts = Object.values(payoutMap)
+      .map((row) => ({
+        ...row,
+        total_earning: Number(row.total_earning.toFixed(2)),
+        total_paid: Number(row.total_paid.toFixed(2)),
+        total_unpaid: Number(row.total_unpaid.toFixed(2)),
+      }))
+      .sort((a, b) => b.total_unpaid - a.total_unpaid);
+
+    return res.json({ payouts });
+  } catch (error) {
+    return res.status(500).json({ error: error.message || 'Failed to fetch seller payouts' });
+  }
+}
+
+async function markSellerPayoutsPaid(req, res) {
+  try {
+    const sellerId = String(req.params.sellerId || '').trim();
+    const { orderItemIds, payoutReference } = req.body;
+
+    if (!sellerId) {
+      return res.status(400).json({ error: 'Seller id is required' });
+    }
+
+    if (!Array.isArray(orderItemIds) || orderItemIds.length === 0) {
+      return res.status(400).json({ error: 'orderItemIds must be a non-empty array' });
+    }
+
+    const normalizedOrderItemIds = [...new Set(orderItemIds.map((value) => Number(value)).filter((value) => Number.isInteger(value) && value > 0))];
+
+    if (!normalizedOrderItemIds.length) {
+      return res.status(400).json({ error: 'No valid order item ids provided' });
+    }
+
+    const { data: selectedItems, error: selectedError } = await supabaseAdmin
+      .from('order_items')
+      .select('id, payout_status, product:products(seller_id)')
+      .in('id', normalizedOrderItemIds);
+
+    if (selectedError) {
+      return res.status(500).json({ error: selectedError.message });
+    }
+
+    if (!selectedItems || !selectedItems.length) {
+      return res.status(404).json({ error: 'No matching order items found' });
+    }
+
+    const validItemIds = selectedItems
+      .filter((item) => item.product?.seller_id === sellerId && (item.payout_status || 'unpaid') !== 'paid')
+      .map((item) => item.id);
+
+    if (!validItemIds.length) {
+      return res.status(400).json({ error: 'No unpaid items found for this seller' });
+    }
+
+    const payload = {
+      payout_status: 'paid',
+      payout_paid_at: new Date().toISOString(),
+      payout_reference: payoutReference || null,
+    };
+
+    const { error: updateError } = await supabaseAdmin
+      .from('order_items')
+      .update(payload)
+      .in('id', validItemIds);
+
+    if (updateError) {
+      return res.status(500).json({ error: updateError.message });
+    }
+
+    return res.json({
+      success: true,
+      updatedCount: validItemIds.length,
+    });
+  } catch (error) {
+    return res.status(500).json({ error: error.message || 'Failed to mark payout as paid' });
+  }
+}
+
 module.exports = {
   getAnalytics,
   getProductSubmissions,
   reviewProductSubmission,
+  getSellerPayouts,
+  markSellerPayoutsPaid,
 };

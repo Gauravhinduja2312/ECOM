@@ -5,8 +5,11 @@ create extension if not exists "pgcrypto";
 create table if not exists public.users (
   id uuid primary key references auth.users(id) on delete cascade,
   email text not null unique,
-  role text not null default 'user' check (role in ('user', 'admin'))
+  role text not null default 'user' check (role in ('user', 'admin')),
+  razorpay_account_id text
 );
+
+alter table public.users add column if not exists razorpay_account_id text;
 
 create table if not exists public.products (
   id bigint generated always as identity primary key,
@@ -60,12 +63,18 @@ create table if not exists public.order_items (
   price numeric(10,2) not null check (price >= 0),
   commission_rate numeric(5,2) not null default 0 check (commission_rate >= 0 and commission_rate <= 100),
   commission_amount numeric(10,2) not null default 0 check (commission_amount >= 0),
-  seller_earning numeric(10,2) not null default 0 check (seller_earning >= 0)
+  seller_earning numeric(10,2) not null default 0 check (seller_earning >= 0),
+  payout_status text not null default 'unpaid' check (payout_status in ('unpaid', 'paid')),
+  payout_paid_at timestamptz,
+  payout_reference text
 );
 
 alter table public.order_items add column if not exists commission_rate numeric(5,2) not null default 0 check (commission_rate >= 0 and commission_rate <= 100);
 alter table public.order_items add column if not exists commission_amount numeric(10,2) not null default 0 check (commission_amount >= 0);
 alter table public.order_items add column if not exists seller_earning numeric(10,2) not null default 0 check (seller_earning >= 0);
+alter table public.order_items add column if not exists payout_status text not null default 'unpaid' check (payout_status in ('unpaid', 'paid'));
+alter table public.order_items add column if not exists payout_paid_at timestamptz;
+alter table public.order_items add column if not exists payout_reference text;
 
 create table if not exists public.leads (
   id bigint generated always as identity primary key,
