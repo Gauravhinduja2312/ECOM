@@ -63,7 +63,7 @@ async function verifyAndCreateOrder(req, res) {
 
     const { data: products, error: productsError } = await supabaseAdmin
       .from('products')
-      .select('id, price, stock, commission_rate, verification_status')
+      .select('id, price, stock, commission_rate, verification_status, seller_id')
       .in('id', productIds);
 
     if (productsError) {
@@ -106,6 +106,7 @@ async function verifyAndCreateOrder(req, res) {
 
       computedItems.push({
         product_id: productId,
+        seller_id: product.seller_id,
         quantity,
         price: unitPrice,
         commission_rate: commissionRate,
@@ -169,6 +170,116 @@ async function verifyAndCreateOrder(req, res) {
       }
     }
 
+    const autoPayoutEnabled = String(process.env.AUTO_PAYOUT_ENABLED || 'false').toLowerCase() === 'true';
+    const payoutSummary = {
+      autoPayoutEnabled,
+      transferredCount: 0,
+      transferredAmount: 0,
+      skippedCount: 0,
+      skippedSellers: [],
+      transferErrors: [],
+    };
+
+    if (autoPayoutEnabled) {
+      const sellerIds = [...new Set(computedItems.map((item) => item.seller_id).filter(Boolean))];
+
+      let sellerAccountById = {};
+      if (sellerIds.length) {
+        const { data: sellerRows, error: sellerRowsError } = await supabaseAdmin
+          .from('users')
+          .select('id, email, razorpay_account_id')
+          .in('id', sellerIds);
+
+        if (!sellerRowsError) {
+          sellerAccountById = Object.fromEntries((sellerRows || []).map((row) => [row.id, row]));
+        }
+      }
+
+      const sellerPayoutBuckets = {};
+      computedItems.forEach((item, index) => {
+        if (!item.seller_id) {
+          return;
+        }
+
+        if (!sellerPayoutBuckets[item.seller_id]) {
+          sellerPayoutBuckets[item.seller_id] = {
+            totalAmount: 0,
+            itemIndexes: [],
+          };
+        }
+
+        sellerPayoutBuckets[item.seller_id].totalAmount += Number(item.seller_earning || 0);
+        sellerPayoutBuckets[item.seller_id].itemIndexes.push(index);
+      });
+
+      const sellerIdsForTransfer = Object.keys(sellerPayoutBuckets);
+
+      for (const sellerId of sellerIdsForTransfer) {
+        const sellerMeta = sellerAccountById[sellerId] || {};
+        const linkedAccountId = sellerMeta.razorpay_account_id;
+        const bucket = sellerPayoutBuckets[sellerId];
+        const transferAmountInPaise = Math.round(Number(bucket.totalAmount || 0) * 100);
+
+        if (!linkedAccountId || transferAmountInPaise <= 0) {
+          payoutSummary.skippedCount += 1;
+          payoutSummary.skippedSellers.push({
+            sellerId,
+            sellerEmail: sellerMeta.email || null,
+            reason: !linkedAccountId ? 'missing_razorpay_account_id' : 'invalid_transfer_amount',
+          });
+          continue;
+        }
+
+        try {
+          const transfer = await razorpay.transfers.create({
+            account: linkedAccountId,
+            amount: transferAmountInPaise,
+            currency: 'INR',
+            notes: {
+              order_id: String(createdOrder.id),
+              seller_id: sellerId,
+              seller_email: sellerMeta.email || '',
+            },
+          });
+
+          const paidItemIds = bucket.itemIndexes
+            .map((itemIndex) => computedItems[itemIndex])
+            .map((item) => item.product_id)
+            .filter(Boolean);
+
+          const { data: relatedOrderItems } = await supabaseAdmin
+            .from('order_items')
+            .select('id, product_id')
+            .eq('order_id', createdOrder.id)
+            .in('product_id', paidItemIds);
+
+          const relatedIds = (relatedOrderItems || []).map((row) => row.id);
+
+          if (relatedIds.length) {
+            await supabaseAdmin
+              .from('order_items')
+              .update({
+                payout_status: 'paid',
+                payout_paid_at: new Date().toISOString(),
+                payout_reference: transfer.id || transfer.utr || transfer.entity || 'auto-transfer',
+              })
+              .in('id', relatedIds);
+          }
+
+          payoutSummary.transferredCount += 1;
+          payoutSummary.transferredAmount += Number(bucket.totalAmount || 0);
+        } catch (transferError) {
+          payoutSummary.transferErrors.push({
+            sellerId,
+            sellerEmail: sellerMeta.email || null,
+            message: transferError.message || 'Transfer failed',
+          });
+        }
+      }
+
+      payoutSummary.transferredAmount = Number(payoutSummary.transferredAmount.toFixed(2));
+    }
+
     const { error: cartDeleteError } = await supabaseAdmin
       .from('cart')
       .delete()
@@ -182,6 +293,7 @@ async function verifyAndCreateOrder(req, res) {
       success: true,
       message: 'Payment verified and order created successfully',
       order: createdOrder,
+      payoutSummary,
     });
   } catch (error) {
     return res.status(500).json({ error: error.message || 'Failed to verify payment' });

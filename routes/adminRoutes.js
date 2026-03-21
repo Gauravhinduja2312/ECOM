@@ -3,6 +3,8 @@ const {
   getAnalytics,
   getProductSubmissions,
   reviewProductSubmission,
+  getSellerPayouts,
+  markSellerPayoutsPaid,
 } = require('../controllers/adminController');
 const { requireAuth } = require('../middleware/auth');
 const { supabaseAdmin } = require('../services/supabaseAdmin');
@@ -30,5 +32,7 @@ async function requireAdmin(req, res, next) {
 router.get('/analytics', requireAuth, requireAdmin, getAnalytics);
 router.get('/product-submissions', requireAuth, requireAdmin, getProductSubmissions);
 router.patch('/product-submissions/:productId/review', requireAuth, requireAdmin, reviewProductSubmission);
+router.get('/seller-payouts', requireAuth, requireAdmin, getSellerPayouts);
+router.patch('/seller-payouts/:sellerId/mark-paid', requireAuth, requireAdmin, markSellerPayoutsPaid);
 
 module.exports = router;
