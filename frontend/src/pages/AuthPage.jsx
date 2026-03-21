@@ -4,7 +4,7 @@ import ErrorMessage from '../components/ErrorMessage';
 import { useAuth } from '../services/AuthContext';
 
 export default function AuthPage() {
-  const { profile, session, signIn, signUp } = useAuth();
+  const { session, signIn, signUp } = useAuth();
   const [isSignup, setIsSignup] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -34,45 +34,77 @@ export default function AuthPage() {
   };
 
   return (
-    <section className="mx-auto max-w-md px-4 py-16">
-      <div className="rounded-xl border border-slate-200 bg-white p-6">
-        <h1 className="text-2xl font-semibold text-slate-900">{isSignup ? 'Create account' : 'Login'}</h1>
-        <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
-          <input
-            type="email"
-            required
-            className="w-full rounded-md border border-slate-300 px-3 py-2"
-            placeholder="Email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-          />
-          <input
-            type="password"
-            required
-            minLength={6}
-            className="w-full rounded-md border border-slate-300 px-3 py-2"
-            placeholder="Password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-          />
+    <section className="mx-auto max-w-md px-4 py-16 animate-fade-in-up">
+      <div className="overflow-hidden rounded-2xl border border-indigo-100 bg-gradient-to-br from-white to-indigo-50/30 p-6 shadow-xl shadow-indigo-200/40 hover-glow">
+        {/* Header */}
+        <div className="mb-6">
+          <p className="inline-flex items-center gap-2">
+            <span className="icon-pill">🔑</span>
+            <span className="text-xs font-semibold uppercase tracking-wider text-indigo-600">Secure Access</span>
+          </p>
+          <h1 className="mt-2 text-2xl font-black tracking-tight text-slate-900">{isSignup ? 'Create Account' : 'Welcome Back'}</h1>
+          <p className="mt-2 text-sm text-slate-600">{isSignup ? 'Join our community today' : 'Sign in to continue shopping'}</p>
+        </div>
+
+        {/* Form */}
+        <form className="space-y-4" onSubmit={handleSubmit}>
+          <div className="form-group">
+            <label className="form-label">📧 Email Address</label>
+            <input
+              type="email"
+              required
+              className="form-input"
+              placeholder="you@example.com"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+            />
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">🔐 Password</label>
+            <input
+              type="password"
+              required
+              minLength={6}
+              className="form-input"
+              placeholder="Min. 6 characters"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+            />
+          </div>
+
           <ErrorMessage message={error} />
+
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-md bg-slate-900 px-4 py-2 text-white"
+            className="btn-gradient w-full rounded-lg px-4 py-2.5 font-medium uppercase tracking-wide disabled:opacity-75 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
-            {loading ? 'Please wait...' : isSignup ? 'Sign up' : 'Login'}
+            {loading ? (
+              <>
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-indigo-200"></div>
+                <span>Processing...</span>
+              </>
+            ) : (
+              isSignup ? 'Create Account' : 'Login'
+            )}
           </button>
         </form>
 
-        <button
-          type="button"
-          className="mt-4 text-sm text-slate-700 underline"
-          onClick={() => setIsSignup((prev) => !prev)}
-        >
-          {isSignup ? 'Already have an account? Login' : 'New user? Create account'}
-        </button>
+        {/* Toggle Auth Mode */}
+        <div className="mt-6 border-t border-slate-200 pt-6">
+          <button
+            type="button"
+            className="inline-flex items-center gap-2 text-sm font-medium text-indigo-600 transition hover:text-indigo-700 hover:underline underline-offset-4"
+            onClick={() => setIsSignup((prev) => !prev)}
+          >
+            {isSignup ? '← Already have an account? Login' : '→ New user? Create account'}
+          </button>
+        </div>
       </div>
+
+      {/* Social Proof Text */}
+      <p className="mt-6 text-center text-xs text-slate-500">🔒 Your data is encrypted and secure</p>
     </section>
   );
 }

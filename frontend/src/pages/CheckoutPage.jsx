@@ -107,19 +107,43 @@ export default function CheckoutPage() {
   };
 
   return (
-    <section className="mx-auto max-w-4xl px-4 py-10">
-      <h1 className="text-3xl font-bold text-slate-900">Checkout</h1>
-      <div className="mt-6 rounded-xl border border-slate-200 bg-white p-6">
-        <p className="text-slate-700">Items: {items.length}</p>
-        <p className="mt-1 text-xl font-semibold text-slate-900">Total: {formatCurrency(total)}</p>
+    <section className="mx-auto max-w-4xl px-4 py-8 animate-fade-in-up sm:py-10">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <h1 className="inline-flex items-center gap-2 text-2xl font-black tracking-tight text-slate-900 sm:text-3xl">
+          <span className="icon-pill">💳</span>
+          Checkout
+        </h1>
+        <p className="text-sm text-slate-600">Secure Razorpay payment</p>
+      </div>
+
+      <div className="glass-panel soft-ring mt-6 rounded-2xl p-5 sm:p-6">
+        <p className="text-slate-700">Items in order: <span className="font-semibold text-slate-900">{items.length}</span></p>
+        <p className="mt-2 text-sm text-slate-600">Total payable</p>
+        <p className="mt-1 text-3xl font-black text-gradient">{formatCurrency(total)}</p>
+
+        <div className="mt-4 rounded-xl border border-indigo-100 bg-white/70 p-3 text-sm text-slate-700">
+          <p className="font-semibold text-slate-900">Payment details</p>
+          <p className="mt-1">You’ll be redirected to Razorpay to complete this transaction safely.</p>
+        </div>
+
         <ErrorMessage message={error} />
         <button
           type="button"
-          className="mt-4 rounded-md bg-slate-900 px-4 py-2 text-white"
+          className="btn-gradient mt-4 inline-flex items-center gap-2 rounded-lg px-5 py-2.5 font-semibold disabled:cursor-not-allowed disabled:opacity-75"
           onClick={handlePayment}
           disabled={loading}
         >
-          {loading ? 'Processing...' : 'Pay with Razorpay'}
+          {loading ? (
+            <>
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-indigo-200" />
+              Processing...
+            </>
+          ) : (
+            <>
+              <span>🔐</span>
+              Pay with Razorpay
+            </>
+          )}
         </button>
       </div>
     </section>

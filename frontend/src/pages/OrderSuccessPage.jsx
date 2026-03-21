@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { useAuth } from '../services/AuthContext';
 import { supabase } from '../services/supabaseClient';
 import Loader from '../components/Loader';
@@ -44,30 +44,53 @@ export default function OrderSuccessPage() {
   if (!order) return <p className="px-4 py-10">Order not found.</p>;
 
   return (
-    <section className="mx-auto max-w-4xl px-4 py-10">
-      <h1 className="text-3xl font-bold text-emerald-700">Payment Successful</h1>
-      <div className="mt-6 rounded-xl border border-slate-200 bg-white p-6">
-        <p className="text-slate-700">Order ID: {order.id}</p>
-        <p className="text-slate-700">Status: {order.status}</p>
-        <p className="mt-2 text-lg font-semibold text-slate-900">
-          Total Paid: {formatCurrency(order.total_price)}
-        </p>
+    <section className="mx-auto max-w-4xl px-4 py-8 animate-fade-in-up sm:py-10">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <h1 className="inline-flex items-center gap-2 text-2xl font-black tracking-tight text-emerald-700 sm:text-3xl">
+          <span className="icon-pill">✅</span>
+          Payment Successful
+        </h1>
+        <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-700">
+          Order Confirmed
+        </span>
+      </div>
 
-        <div className="mt-4 space-y-2">
-          {items.map((item, index) => (
-            <p key={index} className="text-sm text-slate-700">
-              {item.name} × {item.quantity} = {formatCurrency(item.quantity * item.price)}
-            </p>
-          ))}
+      <div className="glass-panel soft-ring mt-6 rounded-2xl p-5 sm:p-6">
+        <div className="grid gap-2 text-sm text-slate-700 sm:grid-cols-2">
+          <p>
+            Order ID: <span className="font-semibold text-slate-900">{order.id}</span>
+          </p>
+          <p>
+            Status: <span className="font-semibold capitalize text-slate-900">{order.status}</span>
+          </p>
         </div>
 
-        <button
-          type="button"
-          className="mt-6 rounded-md bg-slate-900 px-4 py-2 text-white"
-          onClick={() => downloadInvoice(order, items, profile?.email || '')}
-        >
-          Download Invoice PDF
-        </button>
+        <p className="mt-4 text-sm text-slate-600">Total paid</p>
+        <p className="text-gradient mt-1 text-3xl font-black">{formatCurrency(order.total_price)}</p>
+
+        <div className="mt-5 rounded-xl border border-indigo-100 bg-white/70 p-4">
+          <p className="text-sm font-semibold text-slate-900">Items purchased</p>
+          <div className="mt-2 space-y-2">
+          {items.map((item, index) => (
+              <p key={index} className="text-sm text-slate-700">
+                {item.name} × {item.quantity} = {formatCurrency(item.quantity * item.price)}
+              </p>
+          ))}
+          </div>
+        </div>
+
+        <div className="mt-6 flex flex-wrap gap-2">
+          <button
+            type="button"
+            className="btn-gradient rounded-lg px-4 py-2.5"
+            onClick={() => downloadInvoice(order, items, profile?.email || '')}
+          >
+            Download Invoice PDF
+          </button>
+          <Link to="/products" className="btn-gradient-secondary rounded-lg px-4 py-2.5 font-semibold">
+            Continue Shopping
+          </Link>
+        </div>
       </div>
     </section>
   );
