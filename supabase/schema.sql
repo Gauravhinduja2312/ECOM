@@ -6,10 +6,14 @@ create table if not exists public.users (
   id uuid primary key references auth.users(id) on delete cascade,
   email text not null unique,
   role text not null default 'user' check (role in ('user', 'admin')),
-  razorpay_account_id text
+  razorpay_account_id text,
+  upi_id text,
+  upi_qr_url text
 );
 
 alter table public.users add column if not exists razorpay_account_id text;
+alter table public.users add column if not exists upi_id text;
+alter table public.users add column if not exists upi_qr_url text;
 
 create table if not exists public.products (
   id bigint generated always as identity primary key,
