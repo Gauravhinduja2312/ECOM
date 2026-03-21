@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { supabase } from '../services/supabaseClient';
 import ErrorMessage from '../components/ErrorMessage';
+import { preloadProductsPage } from '../utils/preloadRoutes';
 
 export default function LandingPage() {
   const [email, setEmail] = useState('');
@@ -24,6 +25,12 @@ export default function LandingPage() {
     setEmail('');
   };
 
+  const features = [
+    { title: 'Secure payments', icon: '🔒' },
+    { title: 'Real-time inventory', icon: '📦' },
+    { title: 'Fast student support', icon: '⚡' },
+  ];
+
   return (
     <>
       <Helmet>
@@ -34,30 +41,49 @@ export default function LandingPage() {
         />
       </Helmet>
 
-      <section className="mx-auto max-w-6xl px-4 py-16">
-        <div className="rounded-2xl bg-slate-900 p-10 text-white">
-          <h1 className="text-4xl font-bold">Student Marketplace E-Commerce Platform</h1>
-          <p className="mt-4 max-w-2xl text-slate-200">
-            Shop affordable books, gadgets, and supplies curated for students.
+      <section className="mx-auto max-w-6xl px-4 py-10 animate-fade-in-up sm:py-16">
+        <div className="relative overflow-hidden rounded-3xl border border-indigo-200/60 bg-gradient-to-br from-slate-900 via-indigo-900 to-slate-900 p-6 text-white shadow-2xl shadow-indigo-200/60 hover-glow shine-overlay sm:p-10">
+          <div className="absolute -right-20 -top-20 h-56 w-56 rounded-full bg-indigo-400/30 blur-3xl" />
+          <div className="absolute -bottom-20 left-10 h-48 w-48 rounded-full bg-cyan-300/20 blur-3xl" />
+          <p className="relative inline-block rounded-full bg-white/15 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-indigo-100">
+            Student First Platform
           </p>
-          <a
-            href="/products"
-            className="mt-8 inline-block rounded-lg bg-white px-6 py-3 font-medium text-slate-900"
-          >
-            Start Shopping
-          </a>
+          <h1 className="relative mt-4 text-3xl font-black leading-tight sm:text-5xl">
+            Student Marketplace E-Commerce Platform
+          </h1>
+          <p className="relative mt-4 max-w-2xl text-indigo-100/95">
+            Discover affordable books, gadgets, and daily essentials with secure checkout and smooth delivery made for campus life.
+          </p>
+          <div className="relative mt-6 flex flex-wrap items-center gap-3 sm:mt-8">
+            <a
+              href="/products"
+              onMouseEnter={preloadProductsPage}
+              onFocus={preloadProductsPage}
+              onTouchStart={preloadProductsPage}
+              className="btn-gradient inline-flex items-center gap-2 rounded-lg px-5 py-2.5 font-semibold sm:px-6 sm:py-3"
+            >
+              <span>🛍️</span>
+              Start Shopping
+            </a>
+            <span className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-indigo-100">
+              <span>⭐</span>
+              Trusted by students
+            </span>
+          </div>
         </div>
 
-        <div className="mt-10 grid gap-4 md:grid-cols-3">
-          {['Secure payments', 'Real-time inventory', 'Fast student support'].map((feature) => (
-            <div key={feature} className="rounded-xl border border-slate-200 bg-white p-6">
-              <h3 className="font-semibold text-slate-900">{feature}</h3>
+        <div className="mt-10 grid gap-4 md:grid-cols-3 stagger-children">
+          {features.map((feature) => (
+            <div key={feature.title} className="glass-panel soft-ring rounded-2xl p-6 hover-lift hover-glow">
+              <div className="icon-pill">{feature.icon}</div>
+              <h3 className="mt-3 font-semibold text-slate-900">{feature.title}</h3>
+              <p className="mt-1 text-sm text-slate-600">Built for a smooth student shopping experience.</p>
             </div>
           ))}
         </div>
 
-        <form onSubmit={handleLeadSubmit} className="mt-12 rounded-xl border border-slate-200 bg-white p-6">
-          <h2 className="text-xl font-semibold text-slate-900">Get campus offers</h2>
+        <form onSubmit={handleLeadSubmit} className="glass-panel soft-ring mt-10 rounded-2xl p-5 animate-fade-in-up hover-glow sm:mt-12 sm:p-6">
+          <h2 className="text-gradient text-xl font-black">Get campus offers</h2>
           <p className="mt-1 text-sm text-slate-600">Join our mailing list for launch discounts.</p>
           <div className="mt-4 flex flex-col gap-3 sm:flex-row">
             <input
@@ -66,9 +92,9 @@ export default function LandingPage() {
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               placeholder="Enter your email"
-              className="w-full rounded-md border border-slate-300 px-3 py-2"
+              className="form-input w-full"
             />
-            <button type="submit" className="rounded-md bg-slate-900 px-4 py-2 text-white">
+            <button type="submit" className="btn-gradient rounded-lg px-5 py-2">
               Join
             </button>
           </div>
