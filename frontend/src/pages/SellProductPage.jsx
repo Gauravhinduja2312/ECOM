@@ -25,6 +25,8 @@ export default function SellProductPage() {
   const [uploading, setUploading] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+  const [payoutDetails, setPayoutDetails] = useState({ upi_id: '', upi_qr_url: '' });
+  const [savingPayoutDetails, setSavingPayoutDetails] = useState(false);
 
   const fetchMyListings = async () => {
     if (!profile?.id) {
@@ -53,8 +55,74 @@ export default function SellProductPage() {
     fetchMyListings();
   }, [profile?.id]);
 
+  useEffect(() => {
+    const fetchPayoutDetails = async () => {
+      if (!profile?.id) {
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('users')
+        .select('upi_id, upi_qr_url')
+        .eq('id', profile.id)
+        .single();
+
+      if (!error && data) {
+        setPayoutDetails({
+          upi_id: data.upi_id || '',
+          upi_qr_url: data.upi_qr_url || '',
+        });
+      }
+    };
+
+    fetchPayoutDetails();
+  }, [profile?.id]);
+
   const onChange = (key, value) => {
     setForm((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const onPayoutDetailsChange = (key, value) => {
+    setPayoutDetails((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handleSavePayoutDetails = async (event) => {
+    event.preventDefault();
+    if (!profile?.id) {
+      setErrorMessage('Please log in again to save payout details.');
+      return;
+    }
+
+    setSavingPayoutDetails(true);
+    setErrorMessage('');
+    setSuccessMessage('');
+
+    try {
+      const normalizedUpiId = payoutDetails.upi_id.trim();
+
+      if (normalizedUpiId && !/^[a-zA-Z0-9._-]{2,}@[a-zA-Z]{2,}$/.test(normalizedUpiId)) {
+        throw new Error('Please enter a valid UPI ID (example: name@bank).');
+      }
+
+      const { error } = await supabase
+        .from('users')
+        .update({
+          upi_id: normalizedUpiId || null,
+          upi_qr_url: payoutDetails.upi_qr_url.trim() || null,
+        })
+        .eq('id', profile.id);
+
+      if (error) {
+        throw error;
+      }
+
+      setSuccessMessage('Payout details saved successfully. Admin can now use these for payout.');
+      setTimeout(() => setSuccessMessage(''), 3500);
+    } catch (error) {
+      setErrorMessage(error.message || 'Failed to save payout details.');
+    } finally {
+      setSavingPayoutDetails(false);
+    }
   };
 
   const handleImageUpload = async (event) => {
@@ -208,6 +276,31 @@ export default function SellProductPage() {
           <SuccessMessage message={successMessage} />
           <ErrorMessage message={errorMessage} />
         </div>
+
+        <form onSubmit={handleSavePayoutDetails} className="mt-5 space-y-3 rounded-xl border border-slate-200 bg-white/80 p-4">
+          <h2 className="text-sm font-semibold text-slate-900">Payout Details (for receiving money)</h2>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <input
+              className="form-input"
+              value={payoutDetails.upi_id}
+              onChange={(event) => onPayoutDetailsChange('upi_id', event.target.value)}
+              placeholder="UPI ID (example: yourname@bank)"
+            />
+            <input
+              className="form-input"
+              value={payoutDetails.upi_qr_url}
+              onChange={(event) => onPayoutDetailsChange('upi_qr_url', event.target.value)}
+              placeholder="UPI QR image URL (optional)"
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={savingPayoutDetails}
+            className="btn-gradient-secondary px-4 py-2 text-sm"
+          >
+            {savingPayoutDetails ? 'Saving payout details...' : 'Save Payout Details'}
+          </button>
+        </form>
 
         <form onSubmit={handleSubmit} className="mt-5 space-y-4">
           <div className="form-group">

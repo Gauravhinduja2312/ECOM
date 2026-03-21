@@ -33,19 +33,50 @@ export default function AdminDashboardPage() {
   const [sellerPayouts, setSellerPayouts] = useState([]);
   const [payoutReferenceDrafts, setPayoutReferenceDrafts] = useState({});
   const [payoutProcessingSellerId, setPayoutProcessingSellerId] = useState(null);
+  const [dataLoadError, setDataLoadError] = useState('');
 
   const fetchAdminData = async () => {
-    const analyticsData = await apiRequest('/api/admin/analytics', 'GET', session.access_token);
-    setAnalytics(analyticsData);
-    setUsers(analyticsData.crmUsers || []);
+    if (!session?.access_token) {
+      return;
+    }
 
-    const submissionsData = await apiRequest('/api/admin/product-submissions', 'GET', session.access_token);
-    const nextSubmissions = submissionsData.submissions || [];
-    setSubmissions(nextSubmissions);
+    setDataLoadError('');
 
-    try {
-      const payoutsData = await apiRequest('/api/admin/seller-payouts', 'GET', session.access_token);
-      const nextPayouts = payoutsData.payouts || [];
+    const [analyticsResult, submissionsResult, payoutsResult, ordersResult] = await Promise.allSettled([
+      apiRequest('/api/admin/analytics', 'GET', session.access_token),
+      apiRequest('/api/admin/product-submissions', 'GET', session.access_token),
+      apiRequest('/api/admin/seller-payouts', 'GET', session.access_token),
+      supabase.from('orders').select('*').order('created_at', { ascending: false }),
+    ]);
+
+    const loadErrors = [];
+
+    if (analyticsResult.status === 'fulfilled') {
+      setAnalytics(analyticsResult.value);
+      setUsers(analyticsResult.value.crmUsers || []);
+    } else {
+      loadErrors.push('analytics');
+    }
+
+    if (submissionsResult.status === 'fulfilled') {
+      const nextSubmissions = submissionsResult.value.submissions || [];
+      setSubmissions(nextSubmissions);
+
+      const nextDrafts = {};
+      nextSubmissions.forEach((submission) => {
+        nextDrafts[submission.id] = {
+          proposedPrice: submission.proposed_price || submission.price || '',
+          commissionRate: submission.commission_rate ?? 10,
+          note: submission.admin_review_note || '',
+        };
+      });
+      setReviewDrafts(nextDrafts);
+    } else {
+      loadErrors.push('products');
+    }
+
+    if (payoutsResult.status === 'fulfilled') {
+      const nextPayouts = payoutsResult.value.payouts || [];
       setSellerPayouts(nextPayouts);
 
       const nextPayoutReferenceDrafts = {};
@@ -53,36 +84,37 @@ export default function AdminDashboardPage() {
         nextPayoutReferenceDrafts[payout.seller_id] = '';
       });
       setPayoutReferenceDrafts(nextPayoutReferenceDrafts);
-    } catch (error) {
+    } else {
       setSellerPayouts([]);
+      loadErrors.push('payouts');
     }
 
-    const nextDrafts = {};
-    nextSubmissions.forEach((submission) => {
-      nextDrafts[submission.id] = {
-        proposedPrice: submission.proposed_price || submission.price || '',
-        commissionRate: submission.commission_rate ?? 10,
-        note: submission.admin_review_note || '',
-      };
-    });
-    setReviewDrafts(nextDrafts);
+    if (ordersResult.status === 'fulfilled') {
+      const { data: ordersData, error: ordersError } = ordersResult.value;
+      if (ordersError) {
+        loadErrors.push('orders');
+      } else {
+        setOrders(ordersData || []);
 
-    const { data: ordersData } = await supabase.from('orders').select('*').order('created_at', { ascending: false });
+        const itemsMap = {};
+        if (ordersData && ordersData.length > 0) {
+          for (const order of ordersData) {
+            const { data: items } = await supabase
+              .from('order_items')
+              .select('*, product:products(name)')
+              .eq('order_id', order.id);
 
-    setOrders(ordersData || []);
-
-    // Fetch order items for each order
-    if (ordersData && ordersData.length > 0) {
-      const itemsMap = {};
-      for (const order of ordersData) {
-        const { data: items } = await supabase
-          .from('order_items')
-          .select('*, product:products(name)')
-          .eq('order_id', order.id);
-        
-        itemsMap[order.id] = items || [];
+            itemsMap[order.id] = items || [];
+          }
+        }
+        setOrderItems(itemsMap);
       }
-      setOrderItems(itemsMap);
+    } else {
+      loadErrors.push('orders');
+    }
+
+    if (loadErrors.length) {
+      setDataLoadError(`Some sections failed to load: ${loadErrors.join(', ')}. Check backend/Supabase connectivity and try again.`);
     }
   };
 
@@ -203,6 +235,22 @@ export default function AdminDashboardPage() {
     URL.revokeObjectURL(url);
   };
 
+  const createUpiPaymentLink = ({ upiId, amount, sellerName }) => {
+    if (!upiId) {
+      return null;
+    }
+
+    const params = new URLSearchParams({
+      pa: upiId,
+      pn: sellerName || 'Student Seller',
+      am: Number(amount || 0).toFixed(2),
+      cu: 'INR',
+      tn: 'Marketplace seller payout',
+    });
+
+    return `upi://pay?${params.toString()}`;
+  };
+
   const dailySalesLabels = analytics ? Object.keys(analytics.dailySales) : [];
   const dailySalesValues = analytics ? Object.values(analytics.dailySales) : [];
 
@@ -287,6 +335,21 @@ export default function AdminDashboardPage() {
           <div className="rounded-2xl border border-slate-200 bg-white/95 p-5 shadow-sm hover-lift hover-glow">
             <p className="text-sm text-slate-500">Total Users</p>
             <p className="text-2xl font-bold text-slate-900">{analytics.totalUsers}</p>
+          </div>
+        </div>
+      )}
+
+      {dataLoadError && (
+        <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p>{dataLoadError}</p>
+            <button
+              type="button"
+              onClick={fetchAdminData}
+              className="rounded-lg border border-amber-400 bg-white px-3 py-1.5 font-semibold text-amber-800 hover:bg-amber-100"
+            >
+              Retry
+            </button>
           </div>
         </div>
       )}
@@ -588,6 +651,30 @@ export default function AdminDashboardPage() {
                       </div>
 
                       <div className="mt-3 flex flex-wrap items-center gap-2">
+                        {payout.seller_upi_id ? (
+                          <a
+                            href={createUpiPaymentLink({
+                              upiId: payout.seller_upi_id,
+                              amount: payout.total_unpaid || 0,
+                              sellerName: payout.seller_email || payout.seller_id,
+                            })}
+                            className="rounded-lg border border-indigo-300 bg-indigo-50 px-3 py-2 text-sm font-semibold text-indigo-700 transition hover:bg-indigo-100"
+                          >
+                            📲 Pay via UPI App
+                          </a>
+                        ) : null}
+
+                        {payout.seller_upi_qr_url ? (
+                          <a
+                            href={payout.seller_upi_qr_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="rounded-lg border border-violet-300 bg-violet-50 px-3 py-2 text-sm font-semibold text-violet-700 transition hover:bg-violet-100"
+                          >
+                            🧾 Open UPI QR
+                          </a>
+                        ) : null}
+
                         <input
                           type="text"
                           value={payoutReferenceDrafts[payout.seller_id] || ''}
@@ -604,6 +691,13 @@ export default function AdminDashboardPage() {
                           {isProcessing ? 'Marking...' : `Mark Unpaid (${unpaidItems.length}) as Paid`}
                         </button>
                       </div>
+
+                      {(payout.seller_upi_id || payout.seller_upi_qr_url) && (
+                        <div className="mt-2 text-xs text-slate-600">
+                          {payout.seller_upi_id ? `UPI: ${payout.seller_upi_id}` : 'UPI ID not provided'}
+                          {payout.seller_upi_qr_url ? ' • QR available' : ' • QR not provided'}
+                        </div>
+                      )}
 
                       <div className="mt-3 space-y-2">
                         {(payout.items || []).slice(0, 8).map((item) => (
