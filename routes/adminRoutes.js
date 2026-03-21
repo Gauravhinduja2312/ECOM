@@ -1,11 +1,15 @@
 const express = require('express');
-const { getAnalytics } = require('../controllers/adminController');
+const {
+  getAnalytics,
+  getProductSubmissions,
+  reviewProductSubmission,
+} = require('../controllers/adminController');
 const { requireAuth } = require('../middleware/auth');
 const { supabaseAdmin } = require('../services/supabaseAdmin');
 
 const router = express.Router();
 
-router.get('/analytics', requireAuth, async (req, res, next) => {
+async function requireAdmin(req, res, next) {
   const { data, error } = await supabaseAdmin
     .from('users')
     .select('role')
@@ -21,6 +25,10 @@ router.get('/analytics', requireAuth, async (req, res, next) => {
   }
 
   return next();
-}, getAnalytics);
+}
+
+router.get('/analytics', requireAuth, requireAdmin, getAnalytics);
+router.get('/product-submissions', requireAuth, requireAdmin, getProductSubmissions);
+router.patch('/product-submissions/:productId/review', requireAuth, requireAdmin, reviewProductSubmission);
 
 module.exports = router;
