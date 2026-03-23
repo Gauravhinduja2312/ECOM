@@ -1,20 +1,42 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { formatCurrency } from '../utils/format';
+import { getProductDisplayImage, getProductFallbackImage } from '../utils/productImage';
 
 export default function ProductCard({ product, onAdd }) {
   const inStock = Number(product.stock) > 0;
+  const fallbackImage = getProductFallbackImage(product);
+  const [imageSrc, setImageSrc] = useState(getProductDisplayImage(product));
+  const sponsoredActive = Boolean(
+    product.is_sponsored
+    && (!product.sponsored_until || new Date(product.sponsored_until).getTime() > Date.now())
+  );
+
+  useEffect(() => {
+    setImageSrc(getProductDisplayImage(product));
+  }, [product]);
 
   return (
     <article className="group animate-fade-in-up glass-panel soft-ring rounded-2xl p-4 transition hover:-translate-y-1 hover:shadow-lg hover-glow">
       <div className="relative overflow-hidden rounded-xl">
         <img
-          src={product.image_url || 'https://via.placeholder.com/400x220?text=Product'}
+          src={imageSrc}
           alt={product.name}
           className="h-44 w-full object-cover transition duration-300 group-hover:scale-[1.03]"
+          onError={() => {
+            if (imageSrc !== fallbackImage) {
+              setImageSrc(fallbackImage);
+            }
+          }}
         />
         <span className={`absolute left-2 top-2 rounded-full px-2.5 py-1 text-xs font-semibold ${inStock ? 'bg-emerald-500/90 text-white' : 'bg-rose-500/90 text-white'}`}>
           {inStock ? 'In stock' : 'Sold out'}
         </span>
+        {sponsoredActive && (
+          <span className="absolute right-2 top-2 rounded-full bg-indigo-600/90 px-2.5 py-1 text-xs font-semibold text-white">
+            Sponsored
+          </span>
+        )}
       </div>
       <div className="mt-3 space-y-2">
         <h3 className="line-clamp-1 text-lg font-black tracking-tight text-slate-900">{product.name}</h3>

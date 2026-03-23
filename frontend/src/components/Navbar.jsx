@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../services/AuthContext';
 import { useCart } from '../services/CartContext';
 import {
@@ -12,8 +12,17 @@ import {
 } from '../utils/preloadRoutes';
 
 export default function Navbar() {
+  const navigate = useNavigate();
   const { profile, signOut } = useAuth();
   const { items } = useCart();
+
+  const handleLogout = async () => {
+    try {
+      await signOut();
+    } finally {
+      navigate('/auth', { replace: true });
+    }
+  };
 
   return (
     <header className="animate-fade-in sticky top-0 z-30 border-b border-indigo-100 bg-gradient-to-r from-white via-indigo-50/50 to-white backdrop-blur-md shadow-sm">
@@ -108,7 +117,7 @@ export default function Navbar() {
             <button
               type="button"
               className="btn-gradient-secondary px-3 py-2 sm:px-4"
-              onClick={signOut}
+              onClick={handleLogout}
             >
               <span>↪</span>
               <span className="hidden sm:inline">Logout</span>

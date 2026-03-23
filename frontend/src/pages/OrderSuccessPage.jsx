@@ -87,6 +87,9 @@ export default function OrderSuccessPage() {
           >
             Download Invoice PDF
           </button>
+          <Link to="/dashboard" className="btn-gradient-secondary rounded-lg px-4 py-2.5 font-semibold">
+            View Pickup Details
+          </Link>
           <Link to="/products" className="btn-gradient-secondary rounded-lg px-4 py-2.5 font-semibold">
             Continue Shopping
           </Link>
