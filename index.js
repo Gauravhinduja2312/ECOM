@@ -5,6 +5,11 @@ const cors = require('cors');
 const paymentRoutes = require('./routes/paymentRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const productRoutes = require('./routes/productRoutes');
+const {
+  globalLimiter,
+  paymentLimiter,
+  adminLimiter,
+} = require('./middleware/rateLimit');
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -36,13 +41,14 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 app.use(express.json());
+app.use(globalLimiter);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', service: 'student-marketplace-backend' });
 });
 
-app.use('/api/payment', paymentRoutes);
-app.use('/api/admin', adminRoutes);
+app.use('/api/payment', paymentLimiter, paymentRoutes);
+app.use('/api/admin', adminLimiter, adminRoutes);
 app.use('/api/products', productRoutes);
 
 app.listen(port, () => {

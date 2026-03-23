@@ -1,4 +1,9 @@
 const { supabaseAdmin } = require('../services/supabaseAdmin');
+const {
+  isNonEmptyStringWithMaxLength,
+  isArrayLengthInRange,
+  isUuid,
+} = require('../utils/validation');
 
 async function getAnalytics(req, res) {
   try {
@@ -24,6 +29,14 @@ async function getAnalytics(req, res) {
 
     if (orderItemsError) {
       return res.status(500).json({ error: orderItemsError.message });
+    }
+
+    const { data: products, error: productsError } = await supabaseAdmin
+      .from('products')
+      .select('seller_id, listing_fee, is_sponsored, sponsored_fee');
+
+    if (productsError) {
+      return res.status(500).json({ error: productsError.message });
     }
 
     const totalRevenue = orders
@@ -62,10 +75,20 @@ async function getAnalytics(req, res) {
       0
     );
 
+    const totalListingFees = (products || [])
+      .filter((product) => Boolean(product.seller_id))
+      .reduce((sum, product) => sum + Number(product.listing_fee || 0), 0);
+
+    const totalSponsoredFees = (products || [])
+      .filter((product) => Boolean(product.seller_id) && Boolean(product.is_sponsored))
+      .reduce((sum, product) => sum + Number(product.sponsored_fee || 0), 0);
+
     return res.json({
       totalRevenue,
       totalCommission,
       totalSellerPayout,
+      totalListingFees,
+      totalSponsoredFees,
       totalOrders: orders.length,
       totalUsers: users.length,
       dailySales: dailySalesMap,
@@ -81,7 +104,7 @@ async function getProductSubmissions(req, res) {
   try {
     const { data: products, error: productsError } = await supabaseAdmin
       .from('products')
-      .select('id, name, description, price, category, stock, seller_id, verification_status, admin_review_note, proposed_price, price_offer_status, final_price, commission_rate, created_at, updated_at')
+      .select('id, name, description, price, category, stock, seller_id, verification_status, admin_review_note, proposed_price, price_offer_status, final_price, commission_rate, listing_number, listing_fee, is_sponsored, sponsored_fee, sponsored_until, created_at, updated_at')
       .not('seller_id', 'is', null)
       .order('verification_status', { ascending: false })
       .order('created_at', { ascending: false });
@@ -108,7 +131,7 @@ async function getProductSubmissions(req, res) {
 
     const submissions = (products || []).map((product) => ({
       ...product,
-      seller_email: sellerEmailById[product.seller_id] || null,
+      seller_email: sellerMetaById[product.seller_id]?.email || null,
     }));
 
     return res.json({ submissions });
@@ -128,6 +151,12 @@ async function reviewProductSubmission(req, res) {
 
     if (!['verify', 'reject', 'counter'].includes(action)) {
       return res.status(400).json({ error: 'Invalid action' });
+    }
+
+    if (note !== undefined && note !== null) {
+      if (typeof note !== 'string' || note.trim().length > 300) {
+        return res.status(400).json({ error: 'Note must be a string up to 300 characters' });
+      }
     }
 
     const { data: product, error: productError } = await supabaseAdmin
@@ -226,18 +255,18 @@ async function getSellerPayouts(req, res) {
       .map((item) => item.product?.seller_id)
       .filter(Boolean))];
 
-    let sellerEmailById = {};
+    let sellerMetaById = {};
     if (sellerIds.length) {
       const { data: sellers, error: sellersError } = await supabaseAdmin
         .from('users')
-        .select('id, email')
+        .select('id, email, upi_id, upi_qr_url')
         .in('id', sellerIds);
 
       if (sellersError) {
         return res.status(500).json({ error: sellersError.message });
       }
 
-      sellerEmailById = Object.fromEntries((sellers || []).map((seller) => [seller.id, seller.email]));
+      sellerMetaById = Object.fromEntries((sellers || []).map((seller) => [seller.id, seller]));
     }
 
     const payoutMap = {};
@@ -315,8 +344,25 @@ async function markSellerPayoutsPaid(req, res) {
       return res.status(400).json({ error: 'Seller id is required' });
     }
 
+    if (!isUuid(sellerId)) {
+      return res.status(400).json({ error: 'Invalid seller id format' });
+    }
+
     if (!Array.isArray(orderItemIds) || orderItemIds.length === 0) {
       return res.status(400).json({ error: 'orderItemIds must be a non-empty array' });
+    }
+
+    if (!isArrayLengthInRange(orderItemIds, 1, 200)) {
+      return res.status(400).json({ error: 'orderItemIds exceeds allowed limit' });
+    }
+
+    if (
+      payoutReference !== undefined
+      && payoutReference !== null
+      && String(payoutReference).trim() !== ''
+      && !isNonEmptyStringWithMaxLength(String(payoutReference), 120)
+    ) {
+      return res.status(400).json({ error: 'Invalid payout reference' });
     }
 
     const normalizedOrderItemIds = [...new Set(orderItemIds.map((value) => Number(value)).filter((value) => Number.isInteger(value) && value > 0))];
@@ -370,10 +416,67 @@ async function markSellerPayoutsPaid(req, res) {
   }
 }
 
+async function updateOrderStatus(req, res) {
+  try {
+    const orderId = Number(req.params.orderId);
+    const nextStatus = String(req.body.status || '').trim().toLowerCase();
+
+    if (!orderId || Number.isNaN(orderId) || !Number.isInteger(orderId) || orderId <= 0) {
+      return res.status(400).json({ error: 'Invalid order id' });
+    }
+
+    if (!['shipped', 'delivered'].includes(nextStatus)) {
+      return res.status(400).json({ error: 'Invalid order status' });
+    }
+
+    const { data: order, error: orderError } = await supabaseAdmin
+      .from('orders')
+      .select('id, status')
+      .eq('id', orderId)
+      .single();
+
+    if (orderError) {
+      return res.status(500).json({ error: orderError.message });
+    }
+
+    if (!order) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+
+    const currentStatus = String(order.status || '').toLowerCase();
+    const validTransitions = {
+      paid: ['shipped'],
+      shipped: ['delivered'],
+    };
+
+    if (!(validTransitions[currentStatus] || []).includes(nextStatus)) {
+      return res.status(400).json({
+        error: `Cannot move order from ${currentStatus || 'unknown'} to ${nextStatus}`,
+      });
+    }
+
+    const { data: updatedOrder, error: updateError } = await supabaseAdmin
+      .from('orders')
+      .update({ status: nextStatus })
+      .eq('id', orderId)
+      .select('id, status, created_at')
+      .single();
+
+    if (updateError) {
+      return res.status(500).json({ error: updateError.message });
+    }
+
+    return res.json({ success: true, order: updatedOrder });
+  } catch (error) {
+    return res.status(500).json({ error: error.message || 'Failed to update order status' });
+  }
+}
+
 module.exports = {
   getAnalytics,
   getProductSubmissions,
   reviewProductSubmission,
   getSellerPayouts,
   markSellerPayoutsPaid,
+  updateOrderStatus,
 };

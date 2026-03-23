@@ -5,6 +5,8 @@ create extension if not exists "pgcrypto";
 create table if not exists public.users (
   id uuid primary key references auth.users(id) on delete cascade,
   email text not null unique,
+  full_name text,
+  phone text,
   role text not null default 'user' check (role in ('user', 'admin')),
   razorpay_account_id text,
   upi_id text,
@@ -14,6 +16,15 @@ create table if not exists public.users (
 alter table public.users add column if not exists razorpay_account_id text;
 alter table public.users add column if not exists upi_id text;
 alter table public.users add column if not exists upi_qr_url text;
+alter table public.users add column if not exists full_name text;
+alter table public.users add column if not exists phone text;
+alter table public.users drop constraint if exists users_email_ves_domain_check;
+alter table public.users
+  add constraint users_email_ves_domain_check
+  check (
+    email ~* '^[^@]+@ves\\.ac\\.in$'
+    or lower(email) = 'gauravhinduja99@gmail.com'
+  );
 
 create table if not exists public.products (
   id bigint generated always as identity primary key,
@@ -30,6 +41,11 @@ create table if not exists public.products (
   price_offer_status text not null default 'none' check (price_offer_status in ('none', 'pending_student_response', 'accepted', 'rejected')),
   final_price numeric(10,2) check (final_price is null or final_price >= 0),
   commission_rate numeric(5,2) not null default 10 check (commission_rate >= 0 and commission_rate <= 100),
+  listing_number integer check (listing_number is null or listing_number > 0),
+  listing_fee numeric(10,2) not null default 0 check (listing_fee >= 0),
+  is_sponsored boolean not null default false,
+  sponsored_fee numeric(10,2) not null default 0 check (sponsored_fee >= 0),
+  sponsored_until timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -40,8 +56,95 @@ alter table public.products add column if not exists proposed_price numeric(10,2
 alter table public.products add column if not exists price_offer_status text not null default 'none' check (price_offer_status in ('none', 'pending_student_response', 'accepted', 'rejected'));
 alter table public.products add column if not exists final_price numeric(10,2) check (final_price is null or final_price >= 0);
 alter table public.products add column if not exists commission_rate numeric(5,2) not null default 10 check (commission_rate >= 0 and commission_rate <= 100);
+alter table public.products add column if not exists listing_number integer check (listing_number is null or listing_number > 0);
+alter table public.products add column if not exists listing_fee numeric(10,2) not null default 0 check (listing_fee >= 0);
+alter table public.products add column if not exists is_sponsored boolean not null default false;
+alter table public.products add column if not exists sponsored_fee numeric(10,2) not null default 0 check (sponsored_fee >= 0);
+alter table public.products add column if not exists sponsored_until timestamptz;
 alter table public.products add column if not exists created_at timestamptz not null default now();
 alter table public.products add column if not exists updated_at timestamptz not null default now();
+
+create or replace function public.apply_listing_fee()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  existing_listing_count integer := 0;
+  per_listing_fee numeric(10,2) := 10;
+begin
+  if new.seller_id is null then
+    new.listing_number := null;
+    new.listing_fee := coalesce(new.listing_fee, 0);
+    return new;
+  end if;
+
+  select count(*)
+  into existing_listing_count
+  from public.products
+  where seller_id = new.seller_id;
+
+  new.listing_number := existing_listing_count + 1;
+
+  if existing_listing_count >= 1 then
+    new.listing_fee := per_listing_fee;
+  else
+    new.listing_fee := 0;
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists before_product_insert_apply_listing_fee on public.products;
+create trigger before_product_insert_apply_listing_fee
+before insert on public.products
+for each row
+execute function public.apply_listing_fee();
+
+create or replace function public.apply_sponsored_listing_meta()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  per_sponsored_fee numeric(10,2) := 49;
+begin
+  if tg_op = 'INSERT' then
+    if coalesce(new.is_sponsored, false) then
+      new.sponsored_fee := per_sponsored_fee;
+      new.sponsored_until := now() + interval '7 days';
+    else
+      new.sponsored_fee := 0;
+      new.sponsored_until := null;
+    end if;
+
+    return new;
+  end if;
+
+  if tg_op = 'UPDATE' then
+    if coalesce(new.is_sponsored, false) and not coalesce(old.is_sponsored, false) then
+      new.sponsored_fee := per_sponsored_fee;
+      new.sponsored_until := now() + interval '7 days';
+    elsif not coalesce(new.is_sponsored, false) then
+      new.sponsored_fee := 0;
+      new.sponsored_until := null;
+    end if;
+
+    return new;
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists before_product_upsert_apply_sponsored_listing_meta on public.products;
+create trigger before_product_upsert_apply_sponsored_listing_meta
+before insert or update on public.products
+for each row
+execute function public.apply_sponsored_listing_meta();
 
 create table if not exists public.cart (
   id bigint generated always as identity primary key,
@@ -80,6 +183,20 @@ alter table public.order_items add column if not exists payout_status text not n
 alter table public.order_items add column if not exists payout_paid_at timestamptz;
 alter table public.order_items add column if not exists payout_reference text;
 
+create table if not exists public.listing_fee_payments (
+  id bigint generated always as identity primary key,
+  user_id uuid not null references public.users(id) on delete cascade,
+  product_id bigint references public.products(id) on delete set null,
+  listing_fee numeric(10,2) not null default 0 check (listing_fee >= 0),
+  sponsored_fee numeric(10,2) not null default 0 check (sponsored_fee >= 0),
+  total_fee numeric(10,2) not null default 0 check (total_fee >= 0),
+  payment_status text not null default 'pending' check (payment_status in ('pending', 'paid', 'waived', 'failed')),
+  razorpay_order_id text,
+  razorpay_payment_id text unique,
+  razorpay_signature text,
+  created_at timestamptz not null default now()
+);
+
 create table if not exists public.leads (
   id bigint generated always as identity primary key,
   email text not null unique,
@@ -94,8 +211,34 @@ security definer
 set search_path = public
 as $$
 begin
-  insert into public.users (id, email, role)
-  values (new.id, new.email, 'user')
+  if new.email is null or (
+    new.email !~* '^[^@]+@ves\.ac\.in$'
+    and lower(new.email) <> 'gauravhinduja99@gmail.com'
+  ) then
+    raise exception 'Only @ves.ac.in email IDs are allowed (except configured admin email)';
+  end if;
+
+  if lower(new.email) = 'gauravhinduja99@gmail.com' then
+    insert into public.users (id, email, full_name, phone, role)
+    values (
+      new.id,
+      lower(new.email),
+      nullif(trim(coalesce(new.raw_user_meta_data ->> 'full_name', '')), ''),
+      nullif(trim(coalesce(new.raw_user_meta_data ->> 'phone', '')), ''),
+      'admin'
+    )
+    on conflict (id) do nothing;
+    return new;
+  end if;
+
+  insert into public.users (id, email, full_name, phone, role)
+  values (
+    new.id,
+    lower(new.email),
+    nullif(trim(coalesce(new.raw_user_meta_data ->> 'full_name', '')), ''),
+    nullif(trim(coalesce(new.raw_user_meta_data ->> 'phone', '')), ''),
+    'user'
+  )
   on conflict (id) do nothing;
   return new;
 end;
@@ -115,6 +258,7 @@ alter table public.products enable row level security;
 alter table public.cart enable row level security;
 alter table public.orders enable row level security;
 alter table public.order_items enable row level security;
+alter table public.listing_fee_payments enable row level security;
 alter table public.leads enable row level security;
 
 -- Utility: check current user admin
@@ -122,10 +266,14 @@ create or replace function public.is_admin()
 returns boolean
 language sql
 stable
+security definer
+set search_path = public
 as $$
   select exists (
     select 1 from public.users
-    where id = auth.uid() and role = 'admin'
+    where id = auth.uid()
+      and role = 'admin'
+      and lower(email) = 'gauravhinduja99@gmail.com'
   );
 $$;
 
@@ -135,6 +283,10 @@ for select using (auth.uid() = id or public.is_admin());
 
 create policy "Users can update own profile" on public.users
 for update using (auth.uid() = id);
+
+drop policy if exists "Users can insert own profile" on public.users;
+create policy "Users can insert own profile" on public.users
+for insert with check (auth.uid() = id or public.is_admin());
 
 -- Products policies
 drop policy if exists "Anyone can view products" on public.products;
@@ -146,17 +298,9 @@ for select using (
 );
 
 drop policy if exists "Only admin can insert products" on public.products;
-create policy "Authenticated users can insert own products" on public.products
-for insert with check (
-  (
-    auth.uid() = seller_id
-    and auth.uid() is not null
-    and verification_status = 'pending'
-    and price_offer_status = 'none'
-    and proposed_price is null
-  )
-  or public.is_admin()
-);
+drop policy if exists "Authenticated users can insert own products" on public.products;
+create policy "Only admin can insert products" on public.products
+for insert with check (public.is_admin());
 
 drop policy if exists "Only admin can update products" on public.products;
 drop policy if exists "Owners or admin can update products" on public.products;
@@ -218,6 +362,20 @@ for insert with check (
       and (o.user_id = auth.uid() or public.is_admin())
   )
 );
+
+-- Listing fee payment policies
+drop policy if exists "Users can view own listing fee payments" on public.listing_fee_payments;
+create policy "Users can view own listing fee payments" on public.listing_fee_payments
+for select using (auth.uid() = user_id or public.is_admin());
+
+drop policy if exists "Only admin can insert listing fee payments" on public.listing_fee_payments;
+create policy "Only admin can insert listing fee payments" on public.listing_fee_payments
+for insert with check (public.is_admin());
+
+drop policy if exists "Only admin can update listing fee payments" on public.listing_fee_payments;
+create policy "Only admin can update listing fee payments" on public.listing_fee_payments
+for update using (public.is_admin())
+with check (public.is_admin());
 
 -- Leads policies
 create policy "Anyone can insert leads" on public.leads
