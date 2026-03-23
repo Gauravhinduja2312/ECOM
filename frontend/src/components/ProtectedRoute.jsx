@@ -5,11 +5,11 @@ import Loader from './Loader';
 export default function ProtectedRoute({ children }) {
   const { profile, session, loading } = useAuth();
 
-  if (loading) {
+  if (loading || (session && !profile)) {
     return <Loader text="Checking authentication..." />;
   }
 
-  if (!session && !profile) {
+  if (!session) {
     return <Navigate to="/auth" replace />;
   }
 

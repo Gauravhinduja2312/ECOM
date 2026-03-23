@@ -33,7 +33,9 @@ export default function AdminDashboardPage() {
   const [sellerPayouts, setSellerPayouts] = useState([]);
   const [payoutReferenceDrafts, setPayoutReferenceDrafts] = useState({});
   const [payoutProcessingSellerId, setPayoutProcessingSellerId] = useState(null);
+  const [orderStatusProcessingId, setOrderStatusProcessingId] = useState(null);
   const [dataLoadError, setDataLoadError] = useState('');
+  const [upiActionMessage, setUpiActionMessage] = useState('');
 
   const fetchAdminData = async () => {
     if (!session?.access_token) {
@@ -135,6 +137,18 @@ export default function AdminDashboardPage() {
       console.error('Error downloading invoice:', error);
     } finally {
       setDownloadingInvoiceId(null);
+    }
+  };
+
+  const handleUpdateOrderStatus = async (orderId, status) => {
+    try {
+      setOrderStatusProcessingId(orderId);
+      await apiRequest(`/api/admin/orders/${orderId}/status`, 'PATCH', session.access_token, { status });
+      await fetchAdminData();
+    } catch (error) {
+      alert(error.message || 'Failed to update order status');
+    } finally {
+      setOrderStatusProcessingId(null);
     }
   };
 
@@ -251,6 +265,43 @@ export default function AdminDashboardPage() {
     return `upi://pay?${params.toString()}`;
   };
 
+  const handlePayViaUpiApp = async ({ upiId, amount, sellerName, qrUrl }) => {
+    const upiLink = createUpiPaymentLink({ upiId, amount, sellerName });
+
+    if (!upiLink) {
+      setUpiActionMessage('UPI ID not found for this seller.');
+      return;
+    }
+
+    setUpiActionMessage('');
+
+    const isMobileDevice = /Android|iPhone|iPad|iPod/i.test(window.navigator.userAgent || '');
+
+    if (!isMobileDevice) {
+      try {
+        await navigator.clipboard.writeText(upiLink);
+        setUpiActionMessage('Desktop detected: UPI link copied. Open it on your phone UPI app, or use Open UPI QR.');
+      } catch (_error) {
+        setUpiActionMessage('Desktop detected: use Open UPI QR to complete payment.');
+      }
+      return;
+    }
+
+    try {
+      window.location.href = upiLink;
+      setTimeout(() => {
+        setUpiActionMessage('If UPI app did not open, use Open UPI QR and then mark payout as paid.');
+      }, 1200);
+    } catch (_error) {
+      if (qrUrl) {
+        window.open(qrUrl, '_blank', 'noopener,noreferrer');
+        setUpiActionMessage('Could not open UPI app directly. Opened QR as fallback.');
+      } else {
+        setUpiActionMessage('Could not open UPI app. Use payout reference and mark paid manually after transfer.');
+      }
+    }
+  };
+
   const dailySalesLabels = analytics ? Object.keys(analytics.dailySales) : [];
   const dailySalesValues = analytics ? Object.values(analytics.dailySales) : [];
 
@@ -292,6 +343,12 @@ export default function AdminDashboardPage() {
   const pendingProducts = getProductsByStatus('pending');
   const verifiedProducts = getProductsByStatus('verified');
   const rejectedProducts = getProductsByStatus('rejected');
+  const outOfStockProducts = submissions.filter((sub) => Number(sub.stock || 0) <= 0);
+  const lowStockProducts = submissions.filter((sub) => {
+    const stock = Number(sub.stock || 0);
+    return stock > 0 && stock <= 3;
+  });
+  const highStockProducts = submissions.filter((sub) => Number(sub.stock || 0) >= 10);
 
   const displayedProducts = {
     pending: pendingProducts,
@@ -327,6 +384,14 @@ export default function AdminDashboardPage() {
           <div className="rounded-2xl border border-slate-200 bg-white/95 p-5 shadow-sm hover-lift hover-glow">
             <p className="text-sm text-slate-500">Seller Payout</p>
             <p className="text-2xl font-bold text-emerald-700">{formatCurrency(analytics.totalSellerPayout || 0)}</p>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-white/95 p-5 shadow-sm hover-lift hover-glow">
+            <p className="text-sm text-slate-500">Listing Fees</p>
+            <p className="text-2xl font-bold text-amber-700">{formatCurrency(analytics.totalListingFees || 0)}</p>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-white/95 p-5 shadow-sm hover-lift hover-glow">
+            <p className="text-sm text-slate-500">Sponsored Fees</p>
+            <p className="text-2xl font-bold text-fuchsia-700">{formatCurrency(analytics.totalSponsoredFees || 0)}</p>
           </div>
           <div className="rounded-2xl border border-slate-200 bg-white/95 p-5 shadow-sm hover-lift hover-glow">
             <p className="text-sm text-slate-500">Total Orders</p>
@@ -578,7 +643,7 @@ export default function AdminDashboardPage() {
                       <div className="flex-1">
                         <p className="font-semibold text-slate-900">Order #{order.id}</p>
                         <p className="text-xs text-slate-500">{new Date(order.created_at).toLocaleString()}</p>
-                        <p className="mt-2 inline-block px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-900">
+                        <p className="mt-2 inline-block px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-900 capitalize">
                           {order.status}
                         </p>
                       </div>
@@ -592,6 +657,28 @@ export default function AdminDashboardPage() {
                         >
                           {downloadingInvoiceId === order.id ? '⏳ Generating...' : '📥 Download Invoice'}
                         </button>
+
+                        {order.status === 'paid' && (
+                          <button
+                            type="button"
+                            disabled={orderStatusProcessingId === order.id}
+                            onClick={() => handleUpdateOrderStatus(order.id, 'shipped')}
+                            className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-indigo-300 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition disabled:opacity-60"
+                          >
+                            {orderStatusProcessingId === order.id ? '⏳ Updating...' : 'Mark Shipped'}
+                          </button>
+                        )}
+
+                        {order.status === 'shipped' && (
+                          <button
+                            type="button"
+                            disabled={orderStatusProcessingId === order.id}
+                            onClick={() => handleUpdateOrderStatus(order.id, 'delivered')}
+                            className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition disabled:opacity-60"
+                          >
+                            {orderStatusProcessingId === order.id ? '⏳ Updating...' : 'Mark Delivered'}
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -620,6 +707,12 @@ export default function AdminDashboardPage() {
             </div>
 
             <div className="space-y-4 max-h-[36rem] overflow-auto pr-2">
+              {upiActionMessage && (
+                <div className="rounded-lg border border-indigo-300 bg-indigo-50 px-3 py-2 text-sm text-indigo-800">
+                  {upiActionMessage}
+                </div>
+              )}
+
               {sellerPayouts.length === 0 ? (
                 <p className="text-sm text-slate-600 text-center py-8">No seller payout data found.</p>
               ) : (
@@ -652,16 +745,18 @@ export default function AdminDashboardPage() {
 
                       <div className="mt-3 flex flex-wrap items-center gap-2">
                         {payout.seller_upi_id ? (
-                          <a
-                            href={createUpiPaymentLink({
+                          <button
+                            type="button"
+                            onClick={() => handlePayViaUpiApp({
                               upiId: payout.seller_upi_id,
                               amount: payout.total_unpaid || 0,
                               sellerName: payout.seller_email || payout.seller_id,
+                              qrUrl: payout.seller_upi_qr_url,
                             })}
                             className="rounded-lg border border-indigo-300 bg-indigo-50 px-3 py-2 text-sm font-semibold text-indigo-700 transition hover:bg-indigo-100"
                           >
                             📲 Pay via UPI App
-                          </a>
+                          </button>
                         ) : null}
 
                         {payout.seller_upi_qr_url ? (
@@ -776,6 +871,49 @@ export default function AdminDashboardPage() {
                   maintainAspectRatio: false,
                 }}
               />
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="rounded-xl border border-red-200 bg-red-50 p-4">
+                <p className="text-xs text-red-700">Out of Stock</p>
+                <p className="mt-1 text-2xl font-bold text-red-900">{outOfStockProducts.length}</p>
+              </div>
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                <p className="text-xs text-amber-700">Low Stock (1-3)</p>
+                <p className="mt-1 text-2xl font-bold text-amber-900">{lowStockProducts.length}</p>
+              </div>
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                <p className="text-xs text-emerald-700">High Stock (10+)</p>
+                <p className="mt-1 text-2xl font-bold text-emerald-900">{highStockProducts.length}</p>
+              </div>
+            </div>
+
+            <div className="grid gap-4 lg:grid-cols-2">
+              <div className="rounded-xl border border-slate-200 bg-white p-4">
+                <h3 className="font-semibold text-slate-900">Low Stock Alerts</h3>
+                <div className="mt-3 space-y-2">
+                  {lowStockProducts.slice(0, 6).map((product) => (
+                    <div key={`low-${product.id}`} className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm">
+                      <p className="font-medium text-slate-900">{product.name}</p>
+                      <p className="text-xs text-slate-600">Stock: {product.stock}</p>
+                    </div>
+                  ))}
+                  {lowStockProducts.length === 0 && <p className="text-sm text-slate-600">No low-stock products.</p>}
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-slate-200 bg-white p-4">
+                <h3 className="font-semibold text-slate-900">High Stock Products</h3>
+                <div className="mt-3 space-y-2">
+                  {highStockProducts.slice(0, 6).map((product) => (
+                    <div key={`high-${product.id}`} className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm">
+                      <p className="font-medium text-slate-900">{product.name}</p>
+                      <p className="text-xs text-slate-600">Stock: {product.stock}</p>
+                    </div>
+                  ))}
+                  {highStockProducts.length === 0 && <p className="text-sm text-slate-600">No high-stock products.</p>}
+                </div>
+              </div>
             </div>
           </div>
         )}

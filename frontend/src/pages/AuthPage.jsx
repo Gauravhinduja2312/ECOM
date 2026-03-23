@@ -2,17 +2,24 @@ import { useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import ErrorMessage from '../components/ErrorMessage';
 import { useAuth } from '../services/AuthContext';
+import Loader from '../components/Loader';
 
 export default function AuthPage() {
-  const { session, signIn, signUp } = useAuth();
+  const { session, profile, loading: authLoading, signIn, signUp } = useAuth();
   const [isSignup, setIsSignup] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [phone, setPhone] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  if (session) {
-    return <Navigate to="/dashboard" replace />;
+  if (authLoading || (session && !profile)) {
+    return <Loader text="Checking authentication..." />;
+  }
+
+  if (session && profile) {
+    return <Navigate to={profile.role === 'admin' ? '/admin' : '/dashboard'} replace />;
   }
 
   const handleSubmit = async (event) => {
@@ -22,7 +29,7 @@ export default function AuthPage() {
 
     try {
       if (isSignup) {
-        await signUp(email, password);
+        await signUp(email, password, { fullName, phone });
       } else {
         await signIn(email, password);
       }
@@ -44,17 +51,45 @@ export default function AuthPage() {
           </p>
           <h1 className="mt-2 text-2xl font-black tracking-tight text-slate-900">{isSignup ? 'Create Account' : 'Welcome Back'}</h1>
           <p className="mt-2 text-sm text-slate-600">{isSignup ? 'Join our community today' : 'Sign in to continue shopping'}</p>
+          <p className="mt-1 text-xs font-medium text-indigo-700">Only @ves.ac.in email IDs are allowed (except configured admin email).</p>
         </div>
 
         {/* Form */}
         <form className="space-y-4" onSubmit={handleSubmit}>
+          {isSignup && (
+            <>
+              <div className="form-group">
+                <label className="form-label">👤 Full Name</label>
+                <input
+                  type="text"
+                  required
+                  className="form-input"
+                  placeholder="Your full name"
+                  value={fullName}
+                  onChange={(event) => setFullName(event.target.value)}
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">📱 Phone</label>
+                <input
+                  type="tel"
+                  className="form-input"
+                  placeholder="10-digit phone number"
+                  value={phone}
+                  onChange={(event) => setPhone(event.target.value)}
+                />
+              </div>
+            </>
+          )}
+
           <div className="form-group">
             <label className="form-label">📧 Email Address</label>
             <input
               type="email"
               required
               className="form-input"
-              placeholder="you@example.com"
+              placeholder="you@ves.ac.in"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
             />

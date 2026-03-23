@@ -3,13 +3,13 @@ import { useAuth } from '../services/AuthContext';
 import Loader from './Loader';
 
 export default function AdminRoute({ children }) {
-  const { profile, loading } = useAuth();
+  const { session, profile, loading } = useAuth();
 
-  if (loading) {
+  if (loading || (session && !profile)) {
     return <Loader text="Checking admin access..." />;
   }
 
-  if (!profile) {
+  if (!session) {
     return <Navigate to="/auth" replace />;
   }
 

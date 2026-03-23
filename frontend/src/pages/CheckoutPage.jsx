@@ -18,7 +18,7 @@ function loadRazorpayScript() {
 
 export default function CheckoutPage() {
   const { session, profile } = useAuth();
-  const { items } = useCart();
+  const { items, clearCart } = useCart();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -84,6 +84,7 @@ export default function CheckoutPage() {
               }
             );
 
+            await clearCart();
             navigate(`/order-success/${verification.order.id}`);
           } catch (verifyError) {
             setError(verifyError.message);

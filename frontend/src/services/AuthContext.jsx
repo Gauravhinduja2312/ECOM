@@ -2,6 +2,13 @@ import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { supabase } from './supabaseClient';
 
 const AuthContext = createContext(null);
+const VES_EMAIL_REGEX = /^[^\s@]+@ves\.ac\.in$/i;
+const ADMIN_EMAIL = 'gauravhinduja99@gmail.com';
+
+function isAllowedEmail(email) {
+  const normalizedEmail = String(email || '').trim().toLowerCase();
+  return VES_EMAIL_REGEX.test(normalizedEmail) || normalizedEmail === ADMIN_EMAIL;
+}
 
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(null);
@@ -11,7 +18,7 @@ export function AuthProvider({ children }) {
   const fetchProfile = async (userId) => {
     const { data, error } = await supabase
       .from('users')
-      .select('id, email, role')
+      .select('id, email, role, full_name, phone')
       .eq('id', userId)
       .maybeSingle();
 
@@ -54,12 +61,40 @@ export function AuthProvider({ children }) {
       session,
       profile,
       loading,
-      async signUp(email, password) {
-        const { error } = await supabase.auth.signUp({ email, password });
-        if (error) throw error;
+      async signUp(email, password, details = {}) {
+        const normalizedEmail = String(email || '').trim().toLowerCase();
+        if (!isAllowedEmail(normalizedEmail)) {
+          throw new Error('Only @ves.ac.in email IDs are allowed (except the configured admin email).');
+        }
+
+        const fullName = String(details.fullName || '').trim();
+        const phone = String(details.phone || '').trim();
+
+        const { error } = await supabase.auth.signUp({
+          email: normalizedEmail,
+          password,
+          options: {
+            data: {
+              full_name: fullName,
+              phone,
+            },
+          },
+        });
+        if (error) {
+          const message = String(error.message || '').toLowerCase();
+          if (message.includes('already registered') || message.includes('already been registered')) {
+            throw new Error('This email is already registered. Please login instead.');
+          }
+          throw error;
+        }
       },
       async signIn(email, password) {
-        const signInPromise = supabase.auth.signInWithPassword({ email, password });
+        const normalizedEmail = String(email || '').trim().toLowerCase();
+        if (!isAllowedEmail(normalizedEmail)) {
+          throw new Error('Only @ves.ac.in email IDs are allowed (except the configured admin email).');
+        }
+
+        const signInPromise = supabase.auth.signInWithPassword({ email: normalizedEmail, password });
         const timeoutPromise = new Promise((_, reject) => {
           setTimeout(() => reject(new Error('Login timeout. Please try again.')), 15000);
         });
@@ -68,6 +103,8 @@ export function AuthProvider({ children }) {
         if (error) throw error;
       },
       async signOut() {
+        setSession(null);
+        setProfile(null);
         const { error } = await supabase.auth.signOut();
         if (error) throw error;
       },
