@@ -2,8 +2,12 @@ const crypto = require('node:crypto');
 const { razorpay } = require('../services/razorpayClient');
 const { supabaseAdmin } = require('../services/supabaseAdmin');
 const {
+  isNonEmptyStringWithMaxLength,
   isPositiveNumber,
+  isIntegerInRange,
+  isArrayLengthInRange,
   isValidArray,
+  isUuid,
 } = require('../utils/validation');
 
 async function createRazorpayOrder(req, res) {
@@ -14,9 +18,17 @@ async function createRazorpayOrder(req, res) {
       return res.status(400).json({ error: 'Invalid amount' });
     }
 
+    if (String(currency).toUpperCase() !== 'INR') {
+      return res.status(400).json({ error: 'Unsupported currency' });
+    }
+
+    if (receipt !== undefined && receipt !== null && !isNonEmptyStringWithMaxLength(receipt, 100)) {
+      return res.status(400).json({ error: 'Invalid receipt' });
+    }
+
     const order = await razorpay.orders.create({
       amount: Math.round(amount * 100),
-      currency,
+      currency: 'INR',
       receipt,
     });
 
@@ -41,8 +53,28 @@ async function verifyAndCreateOrder(req, res) {
       return res.status(400).json({ error: 'Missing payment verification fields' });
     }
 
+    if (
+      !isNonEmptyStringWithMaxLength(razorpay_order_id, 128)
+      || !isNonEmptyStringWithMaxLength(razorpay_payment_id, 128)
+      || !isNonEmptyStringWithMaxLength(razorpay_signature, 256)
+    ) {
+      return res.status(400).json({ error: 'Invalid payment verification fields' });
+    }
+
     if (!isValidArray(items) || !isPositiveNumber(total) || !userId) {
       return res.status(400).json({ error: 'Invalid order payload' });
+    }
+
+    if (!isUuid(String(userId))) {
+      return res.status(400).json({ error: 'Invalid user id format' });
+    }
+
+    if (!isArrayLengthInRange(items, 1, 50)) {
+      return res.status(400).json({ error: 'Invalid number of order items' });
+    }
+
+    if (total > 1000000) {
+      return res.status(400).json({ error: 'Total amount exceeds allowed limit' });
     }
 
     if (req.user.id !== userId) {
@@ -78,18 +110,27 @@ async function verifyAndCreateOrder(req, res) {
     for (const item of items) {
       const productId = Number(item.product_id);
       const quantity = Number(item.quantity);
+
+      if (!isIntegerInRange(productId, 1, 1_000_000_000)) {
+        return res.status(400).json({ error: 'Invalid product id in order items' });
+      }
+
+      if (!isIntegerInRange(quantity, 1, 100)) {
+        return res.status(400).json({ error: `Invalid quantity for product ${productId}` });
+      }
+
       const product = productMap.get(productId);
 
       if (!product) {
         return res.status(400).json({ error: `Product ${productId} not found` });
       }
 
-      if (product.verification_status !== 'verified') {
-        return res.status(400).json({ error: `Product ${productId} is not approved for sale` });
+      if (product.seller_id && String(product.seller_id) === String(userId)) {
+        return res.status(400).json({ error: `You cannot purchase your own product (Product ${productId})` });
       }
 
-      if (!Number.isInteger(quantity) || quantity <= 0) {
-        return res.status(400).json({ error: `Invalid quantity for product ${productId}` });
+      if (product.verification_status !== 'verified') {
+        return res.status(400).json({ error: `Product ${productId} is not approved for sale` });
       }
 
       if (Number(product.stock) < quantity) {
@@ -300,7 +341,102 @@ async function verifyAndCreateOrder(req, res) {
   }
 }
 
+async function getMyOrdersWithFulfillment(req, res) {
+  try {
+    const userId = req.user.id;
+
+    const { data: orders, error: ordersError } = await supabaseAdmin
+      .from('orders')
+      .select('id, user_id, total_price, status, created_at')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (ordersError) {
+      return res.status(500).json({ error: ordersError.message });
+    }
+
+    if (!orders || orders.length === 0) {
+      return res.json({ orders: [] });
+    }
+
+    const orderIds = orders.map((order) => order.id);
+
+    const { data: orderItems, error: orderItemsError } = await supabaseAdmin
+      .from('order_items')
+      .select('id, order_id, product_id, quantity, price')
+      .in('order_id', orderIds);
+
+    if (orderItemsError) {
+      return res.status(500).json({ error: orderItemsError.message });
+    }
+
+    const productIds = [...new Set((orderItems || []).map((item) => item.product_id).filter(Boolean))];
+
+    let productsById = {};
+    if (productIds.length) {
+      const { data: products, error: productsError } = await supabaseAdmin
+        .from('products')
+        .select('id, name, seller_id')
+        .in('id', productIds);
+
+      if (productsError) {
+        return res.status(500).json({ error: productsError.message });
+      }
+
+      productsById = Object.fromEntries((products || []).map((product) => [product.id, product]));
+    }
+
+    const sellerIds = [...new Set(Object.values(productsById).map((product) => product.seller_id).filter(Boolean))];
+
+    let sellersById = {};
+    if (sellerIds.length) {
+      const { data: sellers, error: sellersError } = await supabaseAdmin
+        .from('users')
+        .select('id, email, phone')
+        .in('id', sellerIds);
+
+      if (sellersError) {
+        return res.status(500).json({ error: sellersError.message });
+      }
+
+      sellersById = Object.fromEntries((sellers || []).map((seller) => [seller.id, seller]));
+    }
+
+    const itemsByOrderId = {};
+
+    (orderItems || []).forEach((item) => {
+      const product = productsById[item.product_id] || null;
+      const seller = product?.seller_id ? sellersById[product.seller_id] || null : null;
+
+      if (!itemsByOrderId[item.order_id]) {
+        itemsByOrderId[item.order_id] = [];
+      }
+
+      itemsByOrderId[item.order_id].push({
+        id: item.id,
+        product_id: item.product_id,
+        product_name: product?.name || `Product #${item.product_id}`,
+        quantity: item.quantity,
+        price: item.price,
+        seller_id: product?.seller_id || null,
+        seller_email: seller?.email || null,
+        seller_phone: seller?.phone || null,
+      });
+    });
+
+    const normalizedOrders = orders.map((order) => ({
+      ...order,
+      items: itemsByOrderId[order.id] || [],
+    }));
+
+    return res.json({ orders: normalizedOrders });
+  } catch (error) {
+    return res.status(500).json({ error: error.message || 'Failed to fetch orders' });
+  }
+}
+
 module.exports = {
   createRazorpayOrder,
   verifyAndCreateOrder,
+  getMyOrdersWithFulfillment,
 };
