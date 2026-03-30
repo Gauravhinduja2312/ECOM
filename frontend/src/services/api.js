@@ -10,11 +10,30 @@ export async function apiRequest(path, method = 'GET', token, body) {
     ...(body ? { body: JSON.stringify(body) } : {}),
   });
 
-  const data = await response.json();
+  const contentType = response.headers.get('content-type') || '';
+  const isJson = contentType.includes('application/json');
+  const responseText = await response.text();
 
-  if (!response.ok) {
-    throw new Error(data.error || 'API request failed');
+  let data = null;
+  if (isJson && responseText) {
+    try {
+      data = JSON.parse(responseText);
+    } catch {
+      data = null;
+    }
   }
 
-  return data;
+  if (!response.ok) {
+    throw new Error(
+      data?.error
+      || data?.message
+      || `API request failed (${response.status})`
+    );
+  }
+
+  if (!isJson) {
+    throw new Error(`Unexpected API response format (${response.status})`);
+  }
+
+  return data || {};
 }
