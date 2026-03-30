@@ -10,7 +10,7 @@ services:
       - key: NODE_ENV
         value: production
       - key: FRONTEND_URL
-        value: https://ecom-52bb3.web.app,http://localhost:5173
+        value: https://ecom-52bb3.web.app,https://ecom-52bb3.firebaseapp.com,http://localhost:5173
       - key: PORT
         value: 10000
       - key: SUPABASE_URL

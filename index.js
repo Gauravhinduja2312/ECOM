@@ -14,7 +14,11 @@ const {
 const app = express();
 const port = process.env.PORT || 5000;
 
-const defaultOrigins = ['http://localhost:5173', 'https://ecom-52bb3.web.app'];
+const defaultOrigins = [
+  'http://localhost:5173',
+  'https://ecom-52bb3.web.app',
+  'https://ecom-52bb3.firebaseapp.com',
+];
 
 const configuredOrigins = (process.env.FRONTEND_URL || '')
   .split(',')
