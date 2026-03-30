@@ -20,7 +20,7 @@ export default function Navbar() {
     try {
       await signOut();
     } finally {
-      navigate('/auth', { replace: true });
+      navigate('/login', { replace: true });
     }
   };
 
@@ -104,7 +104,7 @@ export default function Navbar() {
           {/* Auth Button */}
           {!profile ? (
             <Link
-              to="/auth"
+              to="/login"
               onMouseEnter={preloadAuthPage}
               onFocus={preloadAuthPage}
               onTouchStart={preloadAuthPage}

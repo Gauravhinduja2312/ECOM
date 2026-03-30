@@ -1,18 +1,29 @@
-import { useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import ErrorMessage from '../components/ErrorMessage';
 import { useAuth } from '../services/AuthContext';
 import Loader from '../components/Loader';
 
 export default function AuthPage() {
+  const location = useLocation();
+  const navigate = useNavigate();
   const { session, profile, loading: authLoading, signIn, signUp } = useAuth();
-  const [isSignup, setIsSignup] = useState(false);
+  const [isSignup, setIsSignup] = useState(location.pathname === '/signup');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (location.pathname === '/signup') {
+      setIsSignup(true);
+      return;
+    }
+
+    setIsSignup(false);
+  }, [location.pathname]);
 
   if (authLoading || (session && !profile)) {
     return <Loader text="Checking authentication..." />;
@@ -131,7 +142,7 @@ export default function AuthPage() {
           <button
             type="button"
             className="inline-flex items-center gap-2 text-sm font-medium text-indigo-600 transition hover:text-indigo-700 hover:underline underline-offset-4"
-            onClick={() => setIsSignup((prev) => !prev)}
+            onClick={() => navigate(isSignup ? '/login' : '/signup')}
           >
             {isSignup ? '← Already have an account? Login' : '→ New user? Create account'}
           </button>

@@ -10,7 +10,7 @@ export default function AdminRoute({ children }) {
   }
 
   if (!session) {
-    return <Navigate to="/auth" replace />;
+    return <Navigate to="/login" replace />;
   }
 
   if (profile.role !== 'admin') {
