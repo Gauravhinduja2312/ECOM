@@ -11,7 +11,6 @@ const { requireAuth } = require('../middleware/auth');
 const { supabaseAdmin } = require('../services/supabaseAdmin');
 
 const router = express.Router();
-const ADMIN_EMAIL = 'gauravhinduja99@gmail.com';
 
 async function requireAdmin(req, res, next) {
   const { data, error } = await supabaseAdmin
@@ -24,7 +23,7 @@ async function requireAdmin(req, res, next) {
     return res.status(500).json({ error: error.message });
   }
 
-  if (!data || data.role !== 'admin' || String(data.email || '').toLowerCase() !== ADMIN_EMAIL) {
+  if (!data || String(data.role || '').toLowerCase() !== 'admin') {
     return res.status(403).json({ error: 'Admin access required' });
   }
 
