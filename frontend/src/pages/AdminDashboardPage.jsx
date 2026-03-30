@@ -52,12 +52,14 @@ export default function AdminDashboardPage() {
     ]);
 
     const loadErrors = [];
+    const loadErrorDetails = [];
 
     if (analyticsResult.status === 'fulfilled') {
       setAnalytics(analyticsResult.value);
       setUsers(analyticsResult.value.crmUsers || []);
     } else {
       loadErrors.push('analytics');
+      loadErrorDetails.push(`analytics: ${analyticsResult.reason?.message || 'failed'}`);
     }
 
     if (submissionsResult.status === 'fulfilled') {
@@ -75,6 +77,7 @@ export default function AdminDashboardPage() {
       setReviewDrafts(nextDrafts);
     } else {
       loadErrors.push('products');
+      loadErrorDetails.push(`products: ${submissionsResult.reason?.message || 'failed'}`);
     }
 
     if (payoutsResult.status === 'fulfilled') {
@@ -89,12 +92,14 @@ export default function AdminDashboardPage() {
     } else {
       setSellerPayouts([]);
       loadErrors.push('payouts');
+      loadErrorDetails.push(`payouts: ${payoutsResult.reason?.message || 'failed'}`);
     }
 
     if (ordersResult.status === 'fulfilled') {
       const { data: ordersData, error: ordersError } = ordersResult.value;
       if (ordersError) {
         loadErrors.push('orders');
+        loadErrorDetails.push(`orders: ${ordersError.message || 'failed'}`);
       } else {
         setOrders(ordersData || []);
 
@@ -113,10 +118,12 @@ export default function AdminDashboardPage() {
       }
     } else {
       loadErrors.push('orders');
+      loadErrorDetails.push(`orders: ${ordersResult.reason?.message || 'failed'}`);
     }
 
     if (loadErrors.length) {
-      setDataLoadError(`Some sections failed to load: ${loadErrors.join(', ')}. Check backend/Supabase connectivity and try again.`);
+      const detailsText = loadErrorDetails.length ? ` Details: ${loadErrorDetails.join(' | ')}` : '';
+      setDataLoadError(`Some sections failed to load: ${loadErrors.join(', ')}. Check backend/Supabase connectivity and try again.${detailsText}`);
     }
   };
 
