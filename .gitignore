@@ -5,3 +5,8 @@ node_modules
 frontend/dist
 backend/node_modules
 frontend/node_modules
+frontend/.firebase/
+**/.firebase/
+Business_Strategies_Report.md
+PDF_READY_CONTENT.txt
+SCREENSHOT_GUIDE.md
