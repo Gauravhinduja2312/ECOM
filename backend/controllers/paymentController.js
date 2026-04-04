@@ -677,6 +677,22 @@ async function confirmPickup(req, res) {
       return res.status(403).json({ error: 'Forbidden: You are not the seller for this order' });
     }
 
+    const nextOrderStatus = status === 'picked_up' ? 'completed' : 'ready_for_pickup';
+
+    const { data: updatedOrder, error: orderUpdateError } = await supabaseAdmin
+      .from('orders')
+      .update({
+        status: nextOrderStatus,
+        status_updated_at: new Date().toISOString(),
+      })
+      .eq('id', orderId)
+      .select('id, user_id, status, status_updated_at')
+      .single();
+
+    if (orderUpdateError) {
+      return res.status(500).json({ error: orderUpdateError.message });
+    }
+
     // Get or create logistics entry
     const { data: existingLogistics } = await supabaseAdmin
       .from('order_logistics')
@@ -738,21 +754,14 @@ async function confirmPickup(req, res) {
       updatedLogistics = created;
     }
 
-    // Get order to notify buyer
-    const { data: order } = await supabaseAdmin
-      .from('orders')
-      .select('user_id')
-      .eq('id', orderId)
-      .single();
-
-    if (order) {
+    if (updatedOrder) {
       const statusMessages = {
         pickup_confirmed: 'Seller confirmed your pickup order!',
         picked_up: 'Your order has been picked up by the seller',
       };
 
       await createNotification({
-        userId: order.user_id,
+        userId: updatedOrder.user_id,
         type: 'pickup_status',
         title: `Order #${orderId} - Pickup Update`,
         message: statusMessages[status] || `Pickup status: ${status.replace(/_/g, ' ')}`,
@@ -763,6 +772,7 @@ async function confirmPickup(req, res) {
     return res.json({
       success: true,
       message: `Pickup status updated to ${status}`,
+      order: updatedOrder,
       logistics: updatedLogistics,
     });
   } catch (error) {
