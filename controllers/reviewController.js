@@ -91,7 +91,16 @@ async function createReview(req, res) {
     }
 
     const normalizedOrderStatus = String(orderRow.status || '').toLowerCase();
-    const allowedReviewStatuses = new Set(['order_placed', 'processing', 'ready_for_pickup', 'shipped', 'completed']);
+    const allowedReviewStatuses = new Set([
+      'order_placed',
+      'processing',
+      'ready_for_pickup',
+      'shipped',
+      'completed',
+      'paid',
+      'delivered',
+      'pending',
+    ]);
 
     if (!allowedReviewStatuses.has(normalizedOrderStatus)) {
       return res.status(400).json({ error: 'Reviews are allowed only after successful purchase' });
