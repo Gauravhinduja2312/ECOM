@@ -4,6 +4,31 @@ import ErrorMessage from '../components/ErrorMessage';
 import { useAuth } from '../services/AuthContext';
 import Loader from '../components/Loader';
 
+function getPasswordChecks(password) {
+  return {
+    minLength: password.length >= 10,
+    lowercase: /[a-z]/.test(password),
+    uppercase: /[A-Z]/.test(password),
+    number: /\d/.test(password),
+    specialChar: /[^A-Za-z0-9]/.test(password),
+    noSpaces: !/\s/.test(password),
+  };
+}
+
+function getPasswordStrengthLabel(passwordChecks) {
+  const score = Object.values(passwordChecks).filter(Boolean).length;
+
+  if (score <= 2) {
+    return 'Weak';
+  }
+
+  if (score <= 4) {
+    return 'Medium';
+  }
+
+  return 'Strong';
+}
+
 export default function AuthPage() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -11,10 +36,15 @@ export default function AuthPage() {
   const [isSignup, setIsSignup] = useState(location.pathname === '/signup');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const passwordChecks = getPasswordChecks(password);
+  const isPasswordValid = Object.values(passwordChecks).every(Boolean);
+  const passwordStrength = getPasswordStrengthLabel(passwordChecks);
 
   useEffect(() => {
     if (location.pathname === '/signup') {
@@ -36,6 +66,19 @@ export default function AuthPage() {
   const handleSubmit = async (event) => {
     event.preventDefault();
     setError('');
+
+    if (isSignup) {
+      if (!isPasswordValid) {
+        setError('Password does not meet the required security rules.');
+        return;
+      }
+
+      if (password !== confirmPassword) {
+        setError('Password and confirm password do not match.');
+        return;
+      }
+    }
+
     setLoading(true);
 
     try {
@@ -111,13 +154,41 @@ export default function AuthPage() {
             <input
               type="password"
               required
-              minLength={6}
+              minLength={10}
               className="form-input"
-              placeholder="Min. 6 characters"
+              placeholder="Create a strong password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
             />
+            {isSignup && (
+              <div className="mt-2 rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700">
+                <p className="font-semibold text-slate-900">Password strength: {passwordStrength}</p>
+                <ul className="mt-2 space-y-1">
+                  <li className={passwordChecks.minLength ? 'text-emerald-700' : 'text-slate-600'}>At least 10 characters</li>
+                  <li className={passwordChecks.lowercase ? 'text-emerald-700' : 'text-slate-600'}>At least 1 lowercase letter</li>
+                  <li className={passwordChecks.uppercase ? 'text-emerald-700' : 'text-slate-600'}>At least 1 uppercase letter</li>
+                  <li className={passwordChecks.number ? 'text-emerald-700' : 'text-slate-600'}>At least 1 number</li>
+                  <li className={passwordChecks.specialChar ? 'text-emerald-700' : 'text-slate-600'}>At least 1 special character</li>
+                  <li className={passwordChecks.noSpaces ? 'text-emerald-700' : 'text-slate-600'}>No spaces</li>
+                </ul>
+              </div>
+            )}
           </div>
+
+          {isSignup && (
+            <div className="form-group">
+              <label className="form-label">🔐 Confirm Password</label>
+              <input
+                type="password"
+                required
+                minLength={10}
+                className="form-input"
+                placeholder="Re-enter your password"
+                value={confirmPassword}
+                onChange={(event) => setConfirmPassword(event.target.value)}
+              />
+            </div>
+          )}
 
           <ErrorMessage message={error} />
 
