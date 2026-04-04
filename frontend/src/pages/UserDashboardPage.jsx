@@ -17,6 +17,7 @@ export default function UserDashboardPage() {
 
   useEffect(() => {
     let isMounted = true;
+    let refreshTimeoutId = null;
 
     const fetchDashboardData = async () => {
       try {
@@ -52,23 +53,76 @@ export default function UserDashboardPage() {
       }
     };
 
+    const scheduleRefresh = () => {
+      if (refreshTimeoutId) {
+        return;
+      }
+
+      refreshTimeoutId = window.setTimeout(() => {
+        refreshTimeoutId = null;
+        fetchDashboardData();
+      }, 300);
+    };
+
     if (profile?.id && session?.access_token) {
       fetchDashboardData();
 
-      const intervalId = window.setInterval(fetchDashboardData, 30000);
-      const handleFocus = () => fetchDashboardData();
+      const channel = supabase
+        .channel(`dashboard-updates-${profile.id}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'orders',
+            filter: `user_id=eq.${profile.id}`,
+          },
+          scheduleRefresh
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'notifications',
+            filter: `user_id=eq.${profile.id}`,
+          },
+          scheduleRefresh
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'products',
+            filter: `seller_id=eq.${profile.id}`,
+          },
+          scheduleRefresh
+        )
+        .subscribe();
+
+      const intervalId = window.setInterval(fetchDashboardData, 120000);
+      const handleFocus = () => scheduleRefresh();
 
       window.addEventListener('focus', handleFocus);
 
       return () => {
         isMounted = false;
         window.clearInterval(intervalId);
+        if (refreshTimeoutId) {
+          window.clearTimeout(refreshTimeoutId);
+          refreshTimeoutId = null;
+        }
+        supabase.removeChannel(channel);
         window.removeEventListener('focus', handleFocus);
       };
     }
 
     return () => {
       isMounted = false;
+      if (refreshTimeoutId) {
+        window.clearTimeout(refreshTimeoutId);
+      }
     };
   }, [profile?.id, session?.access_token]);
 
