@@ -2,8 +2,13 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import Loader from '../components/Loader';
 import ErrorMessage from '../components/ErrorMessage';
+import StarRating from '../components/StarRating';
+import ReviewsList from '../components/ReviewsList';
+import ReviewForm from '../components/ReviewForm';
+import RecommendedProducts from '../components/RecommendedProducts';
 import { useCart } from '../services/CartContext';
 import { useAuth } from '../services/AuthContext';
+import { apiRequest } from '../services/api';
 import { supabase } from '../services/supabaseClient';
 import { formatCurrency } from '../utils/format';
 import { getProductDisplayImage, getProductFallbackImage } from '../utils/productImage';
@@ -11,12 +16,26 @@ import { getProductDisplayImage, getProductFallbackImage } from '../utils/produc
 export default function ProductDetailPage() {
   const { id } = useParams();
   const { addToCart } = useCart();
-  const { profile } = useAuth();
+  const { profile, session } = useAuth();
   const [product, setProduct] = useState(null);
   const [sellerDisplayName, setSellerDisplayName] = useState('');
   const [imageSrc, setImageSrc] = useState('');
+  const [reviews, setReviews] = useState([]);
+  const [ratingSummary, setRatingSummary] = useState({ averageRating: 0, totalReviews: 0 });
+  const [eligibleOrders, setEligibleOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  const loadReviews = async () => {
+    try {
+      const reviewResponse = await apiRequest(`/api/reviews/product/${id}`);
+      setReviews(reviewResponse.reviews || []);
+      setRatingSummary(reviewResponse.summary || { averageRating: 0, totalReviews: 0 });
+    } catch {
+      setReviews([]);
+      setRatingSummary({ averageRating: 0, totalReviews: 0 });
+    }
+  };
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -54,11 +73,31 @@ export default function ProductDetailPage() {
         }
       }
 
+      await loadReviews();
+
+      if (session?.access_token) {
+        try {
+          const myOrders = await apiRequest('/api/payment/my-orders', 'GET', session.access_token);
+          const completedOrdersForProduct = (myOrders.orders || []).filter((order) => (
+            String(order.status || '').toLowerCase() === 'completed'
+            && (order.items || []).some((item) => Number(item.product_id) === Number(id))
+          ));
+
+          setEligibleOrders(completedOrdersForProduct);
+        } catch {
+          setEligibleOrders([]);
+        }
+      }
+
       setLoading(false);
     };
 
     fetchProduct();
-  }, [id, profile?.role]);
+  }, [id, profile?.role, session?.access_token]);
+
+  const handleReviewSubmitted = () => {
+    loadReviews();
+  };
 
   if (loading) return <Loader text="Loading product details..." />;
   if (error || !product) return <ErrorMessage message={error || 'Product not found'} />;
@@ -67,13 +106,15 @@ export default function ProductDetailPage() {
   const fallbackImage = getProductFallbackImage(product);
 
   return (
-    <section className="mx-auto max-w-4xl px-4 py-10 animate-fade-in-up">
+    <section className="mx-auto max-w-6xl px-4 py-10 animate-fade-in-up">
+      {/* Product Main Section */}
       <div className="grid gap-8 md:grid-cols-2 stagger-children">
+        {/* Image */}
         <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
           <img
             src={imageSrc}
             alt={product.name}
-            className="h-80 w-full object-cover"
+            className="h-96 w-full object-cover"
             onError={() => {
               if (imageSrc !== fallbackImage) {
                 setImageSrc(fallbackImage);
@@ -85,20 +126,33 @@ export default function ProductDetailPage() {
               inStock ? 'bg-emerald-500/90 text-white' : 'bg-rose-500/90 text-white'
             }`}
           >
-            {inStock ? 'In stock' : 'Sold out'}
+            {inStock ? `${product.stock} in stock` : 'Sold out'}
           </span>
         </div>
+
+        {/* Product Info */}
         <div className="glass-panel soft-ring rounded-2xl p-6 hover-glow">
           <p className="text-xs font-semibold uppercase tracking-wider text-indigo-600">Product Details</p>
           <h1 className="mt-1 text-3xl font-black tracking-tight text-slate-900">{product.name}</h1>
+
+          {/* Rating Badge */}
+          <div className="mt-4 flex items-center gap-4">
+            <div>
+              <StarRating rating={ratingSummary.averageRating || 0} size="md" />
+            </div>
+            <div className="text-sm text-slate-600">
+              <p className="font-semibold text-slate-900">{ratingSummary.averageRating || 0}/5</p>
+              <p className="text-xs">{ratingSummary.totalReviews || 0} review{ratingSummary.totalReviews === 1 ? '' : 's'}</p>
+            </div>
+          </div>
+
           <p className="mt-4 leading-relaxed text-slate-600">{product.description}</p>
-          <p className="text-gradient mt-5 text-3xl font-black">{formatCurrency(product.price)}</p>
-          <div className="mt-4 space-y-1 text-sm text-slate-600">
+          
+          <p className="text-gradient mt-5 text-4xl font-black">{formatCurrency(product.price)}</p>
+
+          <div className="mt-4 space-y-2 text-sm text-slate-600">
             <p>
               Category: <span className="font-semibold text-slate-800">{product.category || 'General'}</span>
-            </p>
-            <p>
-              Stock: <span className="font-semibold text-slate-800">{product.stock}</span>
             </p>
             {profile?.role === 'admin' && sellerDisplayName && (
               <p>
@@ -106,6 +160,7 @@ export default function ProductDetailPage() {
               </p>
             )}
           </div>
+
           <button
             type="button"
             onClick={() => addToCart(product.id)}
@@ -116,6 +171,37 @@ export default function ProductDetailPage() {
             {inStock ? 'Add to Cart' : 'Out of Stock'}
           </button>
         </div>
+      </div>
+
+      <ErrorMessage message={error} />
+
+      {/* Reviews and Feedback Section */}
+      <div className="mt-10 grid gap-8 md:grid-cols-2">
+        {/* Reviews List */}
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h2 className="text-xl font-bold text-slate-900 mb-4">💬 Customer Feedback</h2>
+          <ReviewsList
+            reviews={reviews}
+            averageRating={ratingSummary.averageRating || 0}
+            totalReviews={ratingSummary.totalReviews || 0}
+          />
+        </div>
+
+        {/* Write Review Form */}
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h2 className="text-xl font-bold text-slate-900 mb-4">✍️ Share Your Experience</h2>
+          <ReviewForm
+            productId={id}
+            eligibleOrders={eligibleOrders}
+            onReviewSubmitted={handleReviewSubmitted}
+            session={session}
+          />
+        </div>
+      </div>
+
+      {/* Recommended Products */}
+      <div className="mt-10">
+        <RecommendedProducts productId={id} />
       </div>
     </section>
   );

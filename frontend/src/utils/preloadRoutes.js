@@ -9,6 +9,7 @@ export const preloadUserDashboardPage = () => import('../pages/UserDashboardPage
 export const preloadAdminDashboardPage = () => import('../pages/AdminDashboardPage');
 export const preloadAddProductPage = () => import('../pages/AddProductPage');
 export const preloadSellProductPage = () => import('../pages/SellProductPage');
+export const preloadSellerPickupDashboard = () => import('../pages/SellerPickupDashboard');
 export const preloadNotFoundPage = () => import('../pages/NotFoundPage');
 
 export function warmLikelyRoutes() {

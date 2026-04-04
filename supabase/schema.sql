@@ -158,9 +158,17 @@ create table if not exists public.orders (
   id bigint generated always as identity primary key,
   user_id uuid not null references public.users(id) on delete cascade,
   total_price numeric(10,2) not null check (total_price >= 0),
-  status text not null default 'pending' check (status in ('pending', 'paid', 'shipped', 'delivered')),
+  status text not null default 'order_placed' check (status in ('order_placed', 'processing', 'ready_for_pickup', 'shipped', 'completed')),
+  pickup_location text,
+  pickup_time timestamptz,
+  status_updated_at timestamptz not null default now(),
   created_at timestamptz not null default now()
 );
+
+-- Add missing columns to orders if they don't exist
+alter table public.orders add column if not exists pickup_location text;
+alter table public.orders add column if not exists pickup_time timestamptz;
+alter table public.orders add column if not exists status_updated_at timestamptz not null default now();
 
 create table if not exists public.order_items (
   id bigint generated always as identity primary key,
@@ -182,6 +190,20 @@ alter table public.order_items add column if not exists seller_earning numeric(1
 alter table public.order_items add column if not exists payout_status text not null default 'unpaid' check (payout_status in ('unpaid', 'paid'));
 alter table public.order_items add column if not exists payout_paid_at timestamptz;
 alter table public.order_items add column if not exists payout_reference text;
+
+-- Order logistics table for pickup/fulfillment tracking
+create table if not exists public.order_logistics (
+  id bigint generated always as identity primary key,
+  order_id bigint not null references public.orders(id) on delete cascade,
+  seller_id uuid references public.users(id) on delete set null,
+  pickup_location text not null,
+  pickup_time timestamptz not null,
+  pickup_confirmed_at timestamptz,
+  pickup_completed_at timestamptz,
+  status text not null default 'pending_pickup' check (status in ('pending_pickup', 'pickup_confirmed', 'picked_up', 'delivery_in_progress', 'delivered')),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
 
 create table if not exists public.listing_fee_payments (
   id bigint generated always as identity primary key,
@@ -361,6 +383,34 @@ for insert with check (
     where o.id = order_id
       and (o.user_id = auth.uid() or public.is_admin())
   )
+);
+
+-- Order logistics policies
+alter table public.order_logistics enable row level security;
+
+create policy "Users can view order logistics for own orders" on public.order_logistics
+for select using (
+  exists (
+    select 1 from public.orders o
+    where o.id = order_id
+      and (o.user_id = auth.uid() or public.is_admin())
+  )
+);
+
+create policy "Admin and sellers can create order logistics" on public.order_logistics
+for insert with check (
+  public.is_admin() or (
+    auth.uid() = seller_id
+    and exists (
+      select 1 from public.orders o
+      where o.id = order_id
+    )
+  )
+);
+
+create policy "Admin and sellers can update own order logistics" on public.order_logistics
+for update using (
+  public.is_admin() or auth.uid() = seller_id
 );
 
 -- Listing fee payment policies

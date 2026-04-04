@@ -1,4 +1,5 @@
 const { supabaseAdmin } = require('../services/supabaseAdmin');
+const { createNotification } = require('../services/notificationService');
 const {
   isNonEmptyStringWithMaxLength,
   isArrayLengthInRange,
@@ -33,14 +34,14 @@ async function getAnalytics(req, res) {
 
     const { data: products, error: productsError } = await supabaseAdmin
       .from('products')
-      .select('seller_id, listing_fee, is_sponsored, sponsored_fee');
+      .select('seller_id, listing_fee, is_sponsored, sponsored_fee, stock');
 
     if (productsError) {
       return res.status(500).json({ error: productsError.message });
     }
 
     const totalRevenue = orders
-      .filter((o) => o.status === 'paid' || o.status === 'shipped' || o.status === 'delivered')
+      .filter((o) => ['order_placed', 'processing', 'ready_for_pickup', 'shipped', 'completed'].includes(o.status))
       .reduce((sum, o) => sum + Number(o.total_price), 0);
 
     const dailySalesMap = {};
@@ -83,6 +84,8 @@ async function getAnalytics(req, res) {
       .filter((product) => Boolean(product.seller_id) && Boolean(product.is_sponsored))
       .reduce((sum, product) => sum + Number(product.sponsored_fee || 0), 0);
 
+    const lowStockCount = (products || []).filter((product) => Number(product.stock || 0) > 0 && Number(product.stock || 0) < 3).length;
+
     return res.json({
       totalRevenue,
       totalCommission,
@@ -91,6 +94,7 @@ async function getAnalytics(req, res) {
       totalSponsoredFees,
       totalOrders: orders.length,
       totalUsers: users.length,
+      lowStockCount,
       dailySales: dailySalesMap,
       monthlySales: monthlySalesMap,
       crmUsers,
@@ -425,13 +429,13 @@ async function updateOrderStatus(req, res) {
       return res.status(400).json({ error: 'Invalid order id' });
     }
 
-    if (!['shipped', 'delivered'].includes(nextStatus)) {
+    if (!['processing', 'ready_for_pickup', 'shipped', 'completed'].includes(nextStatus)) {
       return res.status(400).json({ error: 'Invalid order status' });
     }
 
     const { data: order, error: orderError } = await supabaseAdmin
       .from('orders')
-      .select('id, status')
+      .select('id, status, user_id, pickup_location, pickup_time')
       .eq('id', orderId)
       .single();
 
@@ -445,8 +449,10 @@ async function updateOrderStatus(req, res) {
 
     const currentStatus = String(order.status || '').toLowerCase();
     const validTransitions = {
-      paid: ['shipped'],
-      shipped: ['delivered'],
+      order_placed: ['processing'],
+      processing: ['ready_for_pickup', 'shipped'],
+      ready_for_pickup: ['completed'],
+      shipped: ['completed'],
     };
 
     if (!(validTransitions[currentStatus] || []).includes(nextStatus)) {
@@ -457,14 +463,33 @@ async function updateOrderStatus(req, res) {
 
     const { data: updatedOrder, error: updateError } = await supabaseAdmin
       .from('orders')
-      .update({ status: nextStatus })
+      .update({
+        status: nextStatus,
+        pickup_confirmed_by_seller: nextStatus === 'ready_for_pickup',
+        status_updated_at: new Date().toISOString(),
+      })
       .eq('id', orderId)
-      .select('id, status, created_at')
+      .select('id, status, pickup_location, pickup_time, pickup_confirmed_by_seller, created_at, status_updated_at')
       .single();
 
     if (updateError) {
       return res.status(500).json({ error: updateError.message });
     }
+
+    const statusMessageByStatus = {
+      processing: 'Seller started processing your order.',
+      ready_for_pickup: `Your order is ready for pickup at ${order.pickup_location || 'campus counter'}.`,
+      shipped: 'Your order has been shipped by seller.',
+      completed: 'Order marked as completed. You can now leave a review.',
+    };
+
+    await createNotification({
+      userId: order.user_id,
+      type: 'order_status',
+      title: `Order #${order.id} is now ${nextStatus.replaceAll('_', ' ')}`,
+      message: statusMessageByStatus[nextStatus] || 'Your order status has been updated.',
+      actionUrl: '/dashboard',
+    });
 
     return res.json({ success: true, order: updatedOrder });
   } catch (error) {

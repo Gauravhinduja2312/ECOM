@@ -8,6 +8,7 @@ import {
   preloadCartPage,
   preloadProductsPage,
   preloadSellProductPage,
+  preloadSellerPickupDashboard,
   preloadUserDashboardPage,
 } from '../utils/preloadRoutes';
 
@@ -87,6 +88,16 @@ export default function Navbar() {
               >
                 <span>📤</span>
                 <span className="hidden sm:inline">Sell</span>
+              </Link>
+              <Link
+                to="/seller/pickups"
+                onMouseEnter={preloadSellerPickupDashboard}
+                onFocus={preloadSellerPickupDashboard}
+                onTouchStart={preloadSellerPickupDashboard}
+                className="inline-flex items-center gap-1 rounded-lg px-2.5 py-2 text-slate-700 transition hover:bg-cyan-100/60 hover:text-cyan-900 hover-lift sm:px-3"
+              >
+                <span>📦</span>
+                <span className="hidden sm:inline">Pickups</span>
               </Link>
               <Link
                 to="/dashboard"

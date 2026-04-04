@@ -16,6 +16,7 @@ import {
   preloadProductDetailPage,
   preloadProductsPage,
   preloadSellProductPage,
+  preloadSellerPickupDashboard,
   preloadUserDashboardPage,
   warmLikelyRoutes,
 } from './utils/preloadRoutes';
@@ -31,6 +32,7 @@ const UserDashboardPage = lazy(preloadUserDashboardPage);
 const AdminDashboardPage = lazy(preloadAdminDashboardPage);
 const AddProductPage = lazy(preloadAddProductPage);
 const SellProductPage = lazy(preloadSellProductPage);
+const SellerPickupDashboard = lazy(preloadSellerPickupDashboard);
 const NotFoundPage = lazy(preloadNotFoundPage);
 
 function RouteLoader() {
@@ -101,6 +103,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <SellProductPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/seller/pickups"
+              element={
+                <ProtectedRoute>
+                  <SellerPickupDashboard />
                 </ProtectedRoute>
               }
             />

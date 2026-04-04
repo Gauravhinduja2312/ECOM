@@ -22,6 +22,8 @@ export default function CheckoutPage() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [pickupLocation, setPickupLocation] = useState('Main Campus Gate A');
+  const [pickupTime, setPickupTime] = useState('');
 
   const total = items.reduce(
     (sum, item) => sum + Number(item.products?.price || 0) * Number(item.quantity),
@@ -33,6 +35,16 @@ export default function CheckoutPage() {
 
     if (!items.length) {
       setError('Cart is empty');
+      return;
+    }
+
+    if (!pickupLocation.trim()) {
+      setError('Pickup location is required');
+      return;
+    }
+
+    if (!pickupTime) {
+      setError('Pickup date and time are required');
       return;
     }
 
@@ -81,6 +93,8 @@ export default function CheckoutPage() {
                 items: payloadItems,
                 total,
                 userId: profile.id,
+                pickupLocation: pickupLocation.trim(),
+                pickupTime,
               }
             );
 
@@ -125,6 +139,28 @@ export default function CheckoutPage() {
         <div className="mt-4 rounded-xl border border-indigo-100 bg-white/70 p-3 text-sm text-slate-700">
           <p className="font-semibold text-slate-900">Payment details</p>
           <p className="mt-1">You’ll be redirected to Razorpay to complete this transaction safely.</p>
+        </div>
+
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <label className="text-sm text-slate-700">
+            Pickup Location
+            <input
+              type="text"
+              value={pickupLocation}
+              onChange={(event) => setPickupLocation(event.target.value)}
+              className="form-input mt-1"
+              placeholder="e.g. Library Desk"
+            />
+          </label>
+          <label className="text-sm text-slate-700">
+            Pickup Time
+            <input
+              type="datetime-local"
+              value={pickupTime}
+              onChange={(event) => setPickupTime(event.target.value)}
+              className="form-input mt-1"
+            />
+          </label>
         </div>
 
         <ErrorMessage message={error} />

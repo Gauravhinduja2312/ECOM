@@ -353,7 +353,7 @@ export default function AdminDashboardPage() {
   const outOfStockProducts = submissions.filter((sub) => Number(sub.stock || 0) <= 0);
   const lowStockProducts = submissions.filter((sub) => {
     const stock = Number(sub.stock || 0);
-    return stock > 0 && stock <= 3;
+    return stock > 0 && stock < 3;
   });
   const highStockProducts = submissions.filter((sub) => Number(sub.stock || 0) >= 10);
 
@@ -651,7 +651,11 @@ export default function AdminDashboardPage() {
                         <p className="font-semibold text-slate-900">Order #{order.id}</p>
                         <p className="text-xs text-slate-500">{new Date(order.created_at).toLocaleString()}</p>
                         <p className="mt-2 inline-block px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-900 capitalize">
-                          {order.status}
+                          {String(order.status || '').replaceAll('_', ' ')}
+                        </p>
+                        <p className="mt-2 text-xs text-slate-600">
+                          Pickup: {order.pickup_location || 'N/A'}
+                          {order.pickup_time ? ` • ${new Date(order.pickup_time).toLocaleString()}` : ''}
                         </p>
                       </div>
                       <div className="flex flex-col items-end gap-2">
@@ -665,7 +669,29 @@ export default function AdminDashboardPage() {
                           {downloadingInvoiceId === order.id ? '⏳ Generating...' : '📥 Download Invoice'}
                         </button>
 
-                        {order.status === 'paid' && (
+                        {order.status === 'order_placed' && (
+                          <button
+                            type="button"
+                            disabled={orderStatusProcessingId === order.id}
+                            onClick={() => handleUpdateOrderStatus(order.id, 'processing')}
+                            className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-indigo-300 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition disabled:opacity-60"
+                          >
+                            {orderStatusProcessingId === order.id ? '⏳ Updating...' : 'Mark Processing'}
+                          </button>
+                        )}
+
+                        {order.status === 'processing' && (
+                          <button
+                            type="button"
+                            disabled={orderStatusProcessingId === order.id}
+                            onClick={() => handleUpdateOrderStatus(order.id, 'ready_for_pickup')}
+                            className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100 transition disabled:opacity-60"
+                          >
+                            {orderStatusProcessingId === order.id ? '⏳ Updating...' : 'Ready for Pickup'}
+                          </button>
+                        )}
+
+                        {order.status === 'processing' && (
                           <button
                             type="button"
                             disabled={orderStatusProcessingId === order.id}
@@ -676,14 +702,14 @@ export default function AdminDashboardPage() {
                           </button>
                         )}
 
-                        {order.status === 'shipped' && (
+                        {(order.status === 'shipped' || order.status === 'ready_for_pickup') && (
                           <button
                             type="button"
                             disabled={orderStatusProcessingId === order.id}
-                            onClick={() => handleUpdateOrderStatus(order.id, 'delivered')}
+                            onClick={() => handleUpdateOrderStatus(order.id, 'completed')}
                             className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition disabled:opacity-60"
                           >
-                            {orderStatusProcessingId === order.id ? '⏳ Updating...' : 'Mark Delivered'}
+                            {orderStatusProcessingId === order.id ? '⏳ Updating...' : 'Mark Completed'}
                           </button>
                         )}
                       </div>

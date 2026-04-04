@@ -315,8 +315,139 @@ async function respondToPriceOffer(req, res) {
   }
 }
 
+async function getRecommendedProducts(req, res) {
+  try {
+    const productId = Number(req.params.productId);
+
+    if (!isIntegerInRange(productId, 1, 1_000_000_000)) {
+      return res.status(400).json({ error: 'Invalid product id' });
+    }
+
+    // Get current product details
+    const { data: currentProduct, error: productError } = await supabaseAdmin
+      .from('products')
+      .select('id, category, seller_id')
+      .eq('id', productId)
+      .single();
+
+    if (productError || !currentProduct) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+
+    // Strategy 1: Same category products (excluding self)
+    const { data: categoryProducts, error: categoryError } = await supabaseAdmin
+      .from('products')
+      .select('id, name, price, image_url, stock, is_sponsored, sponsored_until')
+      .eq('category', currentProduct.category)
+      .eq('verification_status', 'verified')
+      .neq('id', productId)
+      .neq('seller_id', currentProduct.seller_id)
+      .limit(6)
+      .order('created_at', { ascending: false });
+
+    if (categoryError) {
+      return res.status(500).json({ error: categoryError.message });
+    }
+
+    // Strategy 2: Trending products (most reviewed)
+    const { data: trendingProducts, error: trendingError } = await supabaseAdmin
+      .from('products')
+      .select('id, name, price, image_url, stock, is_sponsored, sponsored_until')
+      .eq('verification_status', 'verified')
+      .neq('id', productId)
+      .limit(4)
+      .order('created_at', { ascending: false });
+
+    if (trendingError) {
+      return res.status(500).json({ error: trendingError.message });
+    }
+
+    // Get reviews for recommended products to compute ratings
+    const allRecommendedIds = [
+      ...new Set([
+        ...(categoryProducts || []).map((p) => p.id),
+        ...(trendingProducts || []).map((p) => p.id),
+      ]),
+    ];
+
+    let reviewsByProductId = {};
+    if (allRecommendedIds.length > 0) {
+      const { data: reviews } = await supabaseAdmin
+        .from('product_reviews')
+        .select('product_id, rating')
+        .in('product_id', allRecommendedIds);
+
+      if (reviews) {
+        allRecommendedIds.forEach((pid) => {
+          const productReviews = reviews.filter((r) => r.product_id === pid);
+          const totalReviews = productReviews.length;
+          const avgRating = totalReviews
+            ? Number((productReviews.reduce((sum, r) => sum + Number(r.rating || 0), 0) / totalReviews).toFixed(1))
+            : 0;
+          reviewsByProductId[pid] = { totalReviews, avgRating };
+        });
+      }
+    }
+
+    const normalizeProduct = (product) => ({
+      ...product,
+      reviews: reviewsByProductId[product.id] || { totalReviews: 0, avgRating: 0 },
+    });
+
+    return res.json({
+      sameCategory: (categoryProducts || []).map(normalizeProduct),
+      trending: (trendingProducts || []).map(normalizeProduct),
+    });
+  } catch (error) {
+    return res.status(500).json({ error: error.message || 'Failed to fetch recommendations' });
+  }
+}
+
+async function getLowStockProducts(req, res) {
+  try {
+    const { data: lowStockProducts, error } = await supabaseAdmin
+      .from('products')
+      .select('id, name, stock, category, seller_id')
+      .eq('verification_status', 'verified')
+      .gt('stock', 0)
+      .lt('stock', 3)
+      .order('stock', { ascending: true });
+
+    if (error) {
+      return res.status(500).json({ error: error.message });
+    }
+
+    const products = lowStockProducts || [];
+
+    // Get seller info
+    const sellerIds = [...new Set(products.map((p) => p.seller_id).filter(Boolean))];
+    let sellersById = {};
+    if (sellerIds.length) {
+      const { data: sellers } = await supabaseAdmin
+        .from('users')
+        .select('id, email')
+        .in('id', sellerIds);
+
+      if (sellers) {
+        sellersById = Object.fromEntries(sellers.map((s) => [s.id, s]));
+      }
+    }
+
+    const normalized = products.map((p) => ({
+      ...p,
+      seller_email: sellersById[p.seller_id]?.email || null,
+    }));
+
+    return res.json({ lowStockProducts: normalized });
+  } catch (error) {
+    return res.status(500).json({ error: error.message || 'Failed to fetch low stock products' });
+  }
+}
+
 module.exports = {
   prepareListingFeePayment,
   verifyListingFeeAndCreate,
   respondToPriceOffer,
+  getRecommendedProducts,
+  getLowStockProducts,
 };

@@ -18,13 +18,6 @@ alter table public.users add column if not exists upi_id text;
 alter table public.users add column if not exists upi_qr_url text;
 alter table public.users add column if not exists full_name text;
 alter table public.users add column if not exists phone text;
-alter table public.users drop constraint if exists users_email_ves_domain_check;
-alter table public.users
-  add constraint users_email_ves_domain_check
-  check (
-    email ~* '^[^@]+@ves\\.ac\\.in$'
-    or lower(email) = 'gauravhinduja99@gmail.com'
-  );
 
 create table if not exists public.products (
   id bigint generated always as identity primary key,
@@ -158,9 +151,32 @@ create table if not exists public.orders (
   id bigint generated always as identity primary key,
   user_id uuid not null references public.users(id) on delete cascade,
   total_price numeric(10,2) not null check (total_price >= 0),
-  status text not null default 'pending' check (status in ('pending', 'paid', 'shipped', 'delivered')),
+  status text not null default 'order_placed' check (status in ('order_placed', 'processing', 'ready_for_pickup', 'shipped', 'completed')),
+  pickup_location text,
+  pickup_time timestamptz,
+  pickup_confirmed_by_seller boolean not null default false,
+  status_updated_at timestamptz not null default now(),
   created_at timestamptz not null default now()
 );
+
+alter table public.orders drop constraint if exists orders_status_check;
+alter table public.orders
+  add constraint orders_status_check
+  check (status in ('order_placed', 'processing', 'ready_for_pickup', 'shipped', 'completed'));
+alter table public.orders alter column status set default 'order_placed';
+alter table public.orders add column if not exists pickup_location text;
+alter table public.orders add column if not exists pickup_time timestamptz;
+alter table public.orders add column if not exists pickup_confirmed_by_seller boolean not null default false;
+alter table public.orders add column if not exists status_updated_at timestamptz not null default now();
+
+update public.orders
+set status = case
+  when status = 'pending' then 'order_placed'
+  when status = 'paid' then 'processing'
+  when status = 'delivered' then 'completed'
+  else status
+end
+where status in ('pending', 'paid', 'delivered');
 
 create table if not exists public.order_items (
   id bigint generated always as identity primary key,
@@ -201,6 +217,29 @@ create table if not exists public.leads (
   id bigint generated always as identity primary key,
   email text not null unique,
   created_at timestamptz not null default now()
+);
+
+create table if not exists public.notifications (
+  id bigint generated always as identity primary key,
+  user_id uuid not null references public.users(id) on delete cascade,
+  type text not null default 'general',
+  title text not null,
+  message text not null,
+  action_url text,
+  is_read boolean not null default false,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.product_reviews (
+  id bigint generated always as identity primary key,
+  order_id bigint not null references public.orders(id) on delete cascade,
+  product_id bigint not null references public.products(id) on delete cascade,
+  user_id uuid not null references public.users(id) on delete cascade,
+  rating integer not null check (rating between 1 and 5),
+  review text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique(order_id, product_id, user_id)
 );
 
 -- Create profile record automatically on signup
@@ -260,6 +299,8 @@ alter table public.orders enable row level security;
 alter table public.order_items enable row level security;
 alter table public.listing_fee_payments enable row level security;
 alter table public.leads enable row level security;
+alter table public.notifications enable row level security;
+alter table public.product_reviews enable row level security;
 
 -- Utility: check current user admin
 create or replace function public.is_admin()
@@ -278,9 +319,11 @@ as $$
 $$;
 
 -- Users policies
+drop policy if exists "Users can view own profile" on public.users;
 create policy "Users can view own profile" on public.users
 for select using (auth.uid() = id or public.is_admin());
 
+drop policy if exists "Users can update own profile" on public.users;
 create policy "Users can update own profile" on public.users
 for update using (auth.uid() = id);
 
@@ -290,6 +333,7 @@ for insert with check (auth.uid() = id or public.is_admin());
 
 -- Products policies
 drop policy if exists "Anyone can view products" on public.products;
+drop policy if exists "Users can view verified or owned products" on public.products;
 create policy "Users can view verified or owned products" on public.products
 for select using (
   verification_status = 'verified'
@@ -304,6 +348,7 @@ for insert with check (public.is_admin());
 
 drop policy if exists "Only admin can update products" on public.products;
 drop policy if exists "Owners or admin can update products" on public.products;
+drop policy if exists "Owners can edit own pending listings" on public.products;
 create policy "Owners can edit own pending listings" on public.products
 for update using (auth.uid() = seller_id)
 with check (
@@ -313,38 +358,48 @@ with check (
   and proposed_price is null
 );
 
+drop policy if exists "Admin can update any product" on public.products;
 create policy "Admin can update any product" on public.products
 for update using (public.is_admin())
 with check (public.is_admin());
 
 drop policy if exists "Only admin can delete products" on public.products;
+drop policy if exists "Owners or admin can delete products" on public.products;
 create policy "Owners or admin can delete products" on public.products
 for delete using (auth.uid() = seller_id or public.is_admin());
 
 -- Cart policies
+drop policy if exists "Users can view own cart" on public.cart;
 create policy "Users can view own cart" on public.cart
 for select using (auth.uid() = user_id or public.is_admin());
 
+drop policy if exists "Users can insert own cart" on public.cart;
 create policy "Users can insert own cart" on public.cart
 for insert with check (auth.uid() = user_id);
 
+drop policy if exists "Users can update own cart" on public.cart;
 create policy "Users can update own cart" on public.cart
 for update using (auth.uid() = user_id);
 
+drop policy if exists "Users can delete own cart" on public.cart;
 create policy "Users can delete own cart" on public.cart
 for delete using (auth.uid() = user_id or public.is_admin());
 
 -- Orders policies
+drop policy if exists "Users can view own orders" on public.orders;
 create policy "Users can view own orders" on public.orders
 for select using (auth.uid() = user_id or public.is_admin());
 
+drop policy if exists "Users can create own orders" on public.orders;
 create policy "Users can create own orders" on public.orders
 for insert with check (auth.uid() = user_id or public.is_admin());
 
+drop policy if exists "Admin can update orders" on public.orders;
 create policy "Admin can update orders" on public.orders
 for update using (public.is_admin());
 
 -- Order items policies
+drop policy if exists "Users can view order items for own orders" on public.order_items;
 create policy "Users can view order items for own orders" on public.order_items
 for select using (
   exists (
@@ -354,6 +409,7 @@ for select using (
   )
 );
 
+drop policy if exists "Users can create order items for own orders" on public.order_items;
 create policy "Users can create order items for own orders" on public.order_items
 for insert with check (
   exists (
@@ -378,28 +434,82 @@ for update using (public.is_admin())
 with check (public.is_admin());
 
 -- Leads policies
+drop policy if exists "Anyone can insert leads" on public.leads;
 create policy "Anyone can insert leads" on public.leads
 for insert with check (true);
 
+drop policy if exists "Only admin can view leads" on public.leads;
 create policy "Only admin can view leads" on public.leads
 for select using (public.is_admin());
+
+-- Notifications policies
+drop policy if exists "Users can view own notifications" on public.notifications;
+create policy "Users can view own notifications" on public.notifications
+for select using (auth.uid() = user_id or public.is_admin());
+
+drop policy if exists "Users can update own notifications" on public.notifications;
+create policy "Users can update own notifications" on public.notifications
+for update using (auth.uid() = user_id or public.is_admin())
+with check (auth.uid() = user_id or public.is_admin());
+
+drop policy if exists "Admin can insert notifications" on public.notifications;
+create policy "Admin can insert notifications" on public.notifications
+for insert with check (public.is_admin());
+
+drop policy if exists "Users can delete own notifications" on public.notifications;
+create policy "Users can delete own notifications" on public.notifications
+for delete using (auth.uid() = user_id or public.is_admin());
+
+-- Product review policies
+drop policy if exists "Anyone can view product reviews" on public.product_reviews;
+create policy "Anyone can view product reviews" on public.product_reviews
+for select using (true);
+
+drop policy if exists "Users can insert own completed-order reviews" on public.product_reviews;
+create policy "Users can insert own completed-order reviews" on public.product_reviews
+for insert with check (
+  auth.uid() = user_id
+  and exists (
+    select 1 from public.orders o
+    where o.id = order_id
+      and o.user_id = auth.uid()
+      and o.status = 'completed'
+  )
+  and exists (
+    select 1 from public.order_items oi
+    where oi.order_id = order_id
+      and oi.product_id = product_id
+  )
+);
+
+drop policy if exists "Users can update own reviews" on public.product_reviews;
+create policy "Users can update own reviews" on public.product_reviews
+for update using (auth.uid() = user_id or public.is_admin())
+with check (auth.uid() = user_id or public.is_admin());
+
+drop policy if exists "Users can delete own reviews" on public.product_reviews;
+create policy "Users can delete own reviews" on public.product_reviews
+for delete using (auth.uid() = user_id or public.is_admin());
 
 -- Storage setup for product images
 insert into storage.buckets (id, name, public)
 values ('product-images', 'product-images', true)
 on conflict (id) do nothing;
 
+drop policy if exists "Public can view product images" on storage.objects;
 create policy "Public can view product images" on storage.objects
 for select using (bucket_id = 'product-images');
 
-drop policy if exists "Admin can upload product images" on storage.objects;
+drop policy if exists "Authenticated users can upload product images" on storage.objects;
 create policy "Authenticated users can upload product images" on storage.objects
 for insert with check (bucket_id = 'product-images' and auth.uid() is not null);
 
 drop policy if exists "Admin can update product images" on storage.objects;
+drop policy if exists "Owner or admin can update product images" on storage.objects;
 create policy "Owner or admin can update product images" on storage.objects
 for update using (bucket_id = 'product-images' and (owner = auth.uid() or public.is_admin()));
 
 drop policy if exists "Admin can delete product images" on storage.objects;
+drop policy if exists "Owner or admin can delete product images" on storage.objects;
 create policy "Owner or admin can delete product images" on storage.objects
 for delete using (bucket_id = 'product-images' and (owner = auth.uid() or public.is_admin()));

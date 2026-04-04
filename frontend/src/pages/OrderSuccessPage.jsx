@@ -3,6 +3,8 @@ import { Link, useParams } from 'react-router-dom';
 import { useAuth } from '../services/AuthContext';
 import { supabase } from '../services/supabaseClient';
 import Loader from '../components/Loader';
+import OrderStatusTimeline from '../components/OrderStatusTimeline';
+import OrderStatusBadge from '../components/OrderStatusBadge';
 import { downloadInvoice } from '../utils/invoice';
 import { formatCurrency } from '../utils/format';
 
@@ -61,12 +63,29 @@ export default function OrderSuccessPage() {
             Order ID: <span className="font-semibold text-slate-900">{order.id}</span>
           </p>
           <p>
-            Status: <span className="font-semibold capitalize text-slate-900">{order.status}</span>
+            Status: <OrderStatusBadge status={order.status} showIcon={true} />
           </p>
         </div>
 
         <p className="mt-4 text-sm text-slate-600">Total paid</p>
         <p className="text-gradient mt-1 text-3xl font-black">{formatCurrency(order.total_price)}</p>
+
+        {/* Order Status Timeline */}
+        <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-4">
+          <h3 className="mb-4 text-sm font-semibold text-slate-700">Order Status Timeline</h3>
+          <OrderStatusTimeline currentStatus={order.status} statusUpdatedAt={order.status_updated_at} />
+        </div>
+
+        {/* Pickup Details */}
+        {order.pickup_location && (
+          <div className="mt-5 rounded-xl border border-indigo-100 bg-white/70 p-4">
+            <p className="text-sm font-semibold text-slate-900">📍 Pickup Information</p>
+            <div className="mt-3 space-y-2 text-sm text-slate-700">
+              <p><span className="font-medium">Location:</span> {order.pickup_location}</p>
+              <p><span className="font-medium">Pickup Time:</span> {new Date(order.pickup_time).toLocaleString()}</p>
+            </div>
+          </div>
+        )}
 
         <div className="mt-5 rounded-xl border border-indigo-100 bg-white/70 p-4">
           <p className="text-sm font-semibold text-slate-900">Items purchased</p>
