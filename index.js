@@ -5,6 +5,8 @@ const cors = require('cors');
 const paymentRoutes = require('./routes/paymentRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const productRoutes = require('./routes/productRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
+const reviewRoutes = require('./routes/reviewRoutes');
 const {
   globalLimiter,
   paymentLimiter,
@@ -50,6 +52,8 @@ app.get('/api/health', (req, res) => {
 app.use('/api/payment', paymentLimiter, paymentRoutes);
 app.use('/api/admin', adminLimiter, adminRoutes);
 app.use('/api/products', productRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/reviews', reviewRoutes);
 
 app.listen(port, () => {
   console.log(`Backend running on port ${port}`);
