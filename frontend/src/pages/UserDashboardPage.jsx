@@ -16,6 +16,8 @@ export default function UserDashboardPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
+
     const fetchDashboardData = async () => {
       try {
         const [ordersResult, notificationsResult, listingsResult] = await Promise.all([
@@ -28,19 +30,46 @@ export default function UserDashboardPage() {
             .order('id', { ascending: false }),
         ]);
 
+        if (!isMounted) {
+          return;
+        }
+
         setOrders(ordersResult.orders || []);
         setNotifications(notificationsResult.notifications || []);
         setMyListings(listingsResult.data || []);
       } catch {
+        if (!isMounted) {
+          return;
+        }
+
         setOrders([]);
         setMyListings([]);
         setNotifications([]);
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
-    if (profile?.id && session?.access_token) fetchDashboardData();
+    if (profile?.id && session?.access_token) {
+      fetchDashboardData();
+
+      const intervalId = window.setInterval(fetchDashboardData, 30000);
+      const handleFocus = () => fetchDashboardData();
+
+      window.addEventListener('focus', handleFocus);
+
+      return () => {
+        isMounted = false;
+        window.clearInterval(intervalId);
+        window.removeEventListener('focus', handleFocus);
+      };
+    }
+
+    return () => {
+      isMounted = false;
+    };
   }, [profile?.id, session?.access_token]);
 
   const totalSpending = useMemo(

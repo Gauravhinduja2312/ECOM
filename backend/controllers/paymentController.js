@@ -427,6 +427,23 @@ async function getMyOrdersWithFulfillment(req, res) {
       sellersById = Object.fromEntries((sellers || []).map((seller) => [seller.id, seller]));
     }
 
+    const { data: logisticsRows, error: logisticsError } = await supabaseAdmin
+      .from('order_logistics')
+      .select('*')
+      .in('order_id', orderIds)
+      .order('created_at', { ascending: false });
+
+    if (logisticsError) {
+      return res.status(500).json({ error: logisticsError.message });
+    }
+
+    const logisticsByOrderId = {};
+    (logisticsRows || []).forEach((logistics) => {
+      if (!logisticsByOrderId[logistics.order_id]) {
+        logisticsByOrderId[logistics.order_id] = logistics;
+      }
+    });
+
     const itemsByOrderId = {};
 
     (orderItems || []).forEach((item) => {
@@ -452,6 +469,7 @@ async function getMyOrdersWithFulfillment(req, res) {
     const normalizedOrders = orders.map((order) => ({
       ...order,
       items: itemsByOrderId[order.id] || [],
+      logistics: logisticsByOrderId[order.id] || null,
     }));
 
     return res.json({ orders: normalizedOrders });

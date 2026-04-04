@@ -3,6 +3,14 @@ import { formatCurrency } from '../utils/format';
 import OrderStatusBadge from './OrderStatusBadge';
 import OrderStatusTimeline from './OrderStatusTimeline';
 
+const PICKUP_STATUS_LABELS = {
+  pending_pickup: 'Pending Confirmation',
+  pickup_confirmed: 'Pickup Confirmed',
+  picked_up: 'Picked Up',
+  delivery_in_progress: 'Delivery In Progress',
+  delivered: 'Delivered',
+};
+
 export default function OrderTrackingCard({ order, isExpandable = true }) {
   const [isExpanded, setIsExpanded] = React.useState(!isExpandable);
 
@@ -11,6 +19,7 @@ export default function OrderTrackingCard({ order, isExpandable = true }) {
   }
 
   const pickupDateTime = order.pickup_time ? new Date(order.pickup_time).toLocaleString() : 'Not scheduled';
+  const pickupStatus = order.logistics?.status || null;
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white/95 shadow-sm hover-lift hover-glow">
@@ -60,6 +69,12 @@ export default function OrderTrackingCard({ order, isExpandable = true }) {
               <div>
                 <span className="font-medium text-slate-700">Pickup Time:</span>
                 <p className="mt-1 text-slate-600">{pickupDateTime}</p>
+              </div>
+              <div>
+                <span className="font-medium text-slate-700">Pickup Status:</span>
+                <p className="mt-1 text-slate-600">
+                  {pickupStatus ? PICKUP_STATUS_LABELS[pickupStatus] || pickupStatus : 'Not updated yet'}
+                </p>
               </div>
             </div>
           </div>
