@@ -91,6 +91,14 @@ function App() {
               }
             />
             <Route
+              path="/order/:id"
+              element={
+                <ProtectedRoute>
+                  <OrderSuccessPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/dashboard"
               element={
                 <ProtectedRoute>
