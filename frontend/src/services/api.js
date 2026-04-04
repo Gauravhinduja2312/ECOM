@@ -1,4 +1,25 @@
-const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
+const configuredBackendUrl = (import.meta.env.VITE_BACKEND_URL || '').trim();
+const productionBackendUrl = 'https://ecom-pn0s.onrender.com';
+
+function resolveBackendUrl() {
+  if (typeof window === 'undefined') {
+    return configuredBackendUrl || productionBackendUrl;
+  }
+
+  const isLocalhost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+
+  if (isLocalhost) {
+    return configuredBackendUrl || 'http://localhost:5000';
+  }
+
+  if (!configuredBackendUrl || configuredBackendUrl.includes('localhost')) {
+    return productionBackendUrl;
+  }
+
+  return configuredBackendUrl;
+}
+
+const backendUrl = resolveBackendUrl();
 
 export async function apiRequest(path, method = 'GET', token, body) {
   const response = await fetch(`${backendUrl}${path}`, {
