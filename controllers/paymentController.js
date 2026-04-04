@@ -527,11 +527,27 @@ async function getSellerOrders(req, res) {
 
     const querySellerId = req.query.sellerId && req.user.is_admin ? req.query.sellerId : sellerId;
 
-    // Get all order items for this seller
+    // Resolve this seller's product IDs first, then fetch order items by product.
+    const { data: sellerProducts, error: sellerProductsError } = await supabaseAdmin
+      .from('products')
+      .select('id')
+      .eq('seller_id', querySellerId);
+
+    if (sellerProductsError) {
+      return res.status(500).json({ error: sellerProductsError.message });
+    }
+
+    const sellerProductIds = (sellerProducts || []).map((product) => product.id);
+
+    if (!sellerProductIds.length) {
+      return res.json({ orders: [] });
+    }
+
+    // Get all order items for this seller's products
     const { data: sellerOrderItems, error: itemsError } = await supabaseAdmin
       .from('order_items')
       .select('id, order_id, product_id, quantity, price')
-      .eq('seller_id', querySellerId);
+      .in('product_id', sellerProductIds);
 
     if (itemsError) {
       return res.status(500).json({ error: itemsError.message });
@@ -612,18 +628,34 @@ async function confirmPickup(req, res) {
       return res.status(400).json({ error: `Invalid status. Allowed: ${validPickupStatuses.join(', ')}` });
     }
 
-    // Check if seller is selling products in this order
+    // Check if this seller owns at least one product in the order.
     const { data: orderItems, error: itemsError } = await supabaseAdmin
       .from('order_items')
-      .select('id, seller_id')
-      .eq('order_id', orderId)
-      .eq('seller_id', sellerId);
+      .select('id, product_id')
+      .eq('order_id', orderId);
 
     if (itemsError) {
       return res.status(500).json({ error: itemsError.message });
     }
 
-    if (!orderItems || orderItems.length === 0) {
+    const orderProductIds = (orderItems || []).map((item) => item.product_id).filter(Boolean);
+
+    if (!orderProductIds.length) {
+      return res.status(404).json({ error: 'Order not found or has no items' });
+    }
+
+    const { data: ownedProducts, error: ownedProductsError } = await supabaseAdmin
+      .from('products')
+      .select('id')
+      .in('id', orderProductIds)
+      .eq('seller_id', sellerId)
+      .limit(1);
+
+    if (ownedProductsError) {
+      return res.status(500).json({ error: ownedProductsError.message });
+    }
+
+    if (!ownedProducts || ownedProducts.length === 0) {
       return res.status(403).json({ error: 'Forbidden: You are not the seller for this order' });
     }
 
