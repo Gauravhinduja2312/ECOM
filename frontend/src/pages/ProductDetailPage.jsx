@@ -78,8 +78,9 @@ export default function ProductDetailPage() {
       if (session?.access_token) {
         try {
           const myOrders = await apiRequest('/api/payment/my-orders', 'GET', session.access_token);
+          const reviewEligibleStatuses = new Set(['processing', 'ready_for_pickup', 'shipped', 'completed']);
           const completedOrdersForProduct = (myOrders.orders || []).filter((order) => (
-            String(order.status || '').toLowerCase() === 'completed'
+            reviewEligibleStatuses.has(String(order.status || '').toLowerCase())
             && (order.items || []).some((item) => Number(item.product_id) === Number(id))
           ));
 

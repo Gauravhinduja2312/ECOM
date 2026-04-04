@@ -29,6 +29,40 @@ function getPasswordStrengthLabel(passwordChecks) {
   return 'Strong';
 }
 
+async function sha1Hex(text) {
+  const encoded = new TextEncoder().encode(text);
+  const digest = await crypto.subtle.digest('SHA-1', encoded);
+  return Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('')
+    .toUpperCase();
+}
+
+async function fetchPwnedCount(password) {
+  const hash = await sha1Hex(password);
+  const prefix = hash.slice(0, 5);
+  const suffix = hash.slice(5);
+
+  const response = await fetch(`https://api.pwnedpasswords.com/range/${prefix}`);
+
+  if (!response.ok) {
+    throw new Error('Unable to verify password safety right now');
+  }
+
+  const body = await response.text();
+  const match = body
+    .split('\n')
+    .map((line) => line.trim())
+    .find((line) => line.startsWith(`${suffix}:`));
+
+  if (!match) {
+    return 0;
+  }
+
+  const count = Number(match.split(':')[1] || 0);
+  return Number.isNaN(count) ? 0 : count;
+}
+
 export default function AuthPage() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -37,6 +71,11 @@ export default function AuthPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [breachChecking, setBreachChecking] = useState(false);
+  const [breachCount, setBreachCount] = useState(0);
+  const [breachError, setBreachError] = useState('');
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
   const [error, setError] = useState('');
@@ -54,6 +93,53 @@ export default function AuthPage() {
 
     setIsSignup(false);
   }, [location.pathname]);
+
+  useEffect(() => {
+    let cancelled = false;
+    let timeoutId;
+
+    const checkBreach = async () => {
+      if (!isSignup || !password) {
+        setBreachCount(0);
+        setBreachError('');
+        setBreachChecking(false);
+        return;
+      }
+
+      if (!isPasswordValid) {
+        setBreachCount(0);
+        setBreachError('');
+        setBreachChecking(false);
+        return;
+      }
+
+      setBreachChecking(true);
+      setBreachError('');
+
+      try {
+        const count = await fetchPwnedCount(password);
+        if (!cancelled) {
+          setBreachCount(count);
+        }
+      } catch (checkError) {
+        if (!cancelled) {
+          setBreachError(checkError.message || 'Password safety check failed');
+          setBreachCount(0);
+        }
+      } finally {
+        if (!cancelled) {
+          setBreachChecking(false);
+        }
+      }
+    };
+
+    timeoutId = window.setTimeout(checkBreach, 450);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutId);
+    };
+  }, [isSignup, password, isPasswordValid]);
 
   if (authLoading || (session && !profile)) {
     return <Loader text="Checking authentication..." />;
@@ -75,6 +161,11 @@ export default function AuthPage() {
 
       if (password !== confirmPassword) {
         setError('Password and confirm password do not match.');
+        return;
+      }
+
+      if (breachCount > 0) {
+        setError('This password appears in known breaches. Please choose a different password.');
         return;
       }
     }
@@ -151,15 +242,24 @@ export default function AuthPage() {
 
           <div className="form-group">
             <label className="form-label">🔐 Password</label>
-            <input
-              type="password"
-              required
-              minLength={10}
-              className="form-input"
-              placeholder="Create a strong password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                required
+                minLength={10}
+                className="form-input pr-24"
+                placeholder="Create a strong password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+              />
+              <button
+                type="button"
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-600"
+                onClick={() => setShowPassword((prev) => !prev)}
+              >
+                {showPassword ? 'Hide' : 'Show'}
+              </button>
+            </div>
             {isSignup && (
               <div className="mt-2 rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700">
                 <p className="font-semibold text-slate-900">Password strength: {passwordStrength}</p>
@@ -171,6 +271,18 @@ export default function AuthPage() {
                   <li className={passwordChecks.specialChar ? 'text-emerald-700' : 'text-slate-600'}>At least 1 special character</li>
                   <li className={passwordChecks.noSpaces ? 'text-emerald-700' : 'text-slate-600'}>No spaces</li>
                 </ul>
+                {breachChecking && (
+                  <p className="mt-2 text-slate-600">Checking breach database...</p>
+                )}
+                {!breachChecking && breachCount > 0 && (
+                  <p className="mt-2 font-semibold text-rose-700">This password appears in known breaches ({breachCount} times).</p>
+                )}
+                {!breachChecking && !breachError && password && isPasswordValid && breachCount === 0 && (
+                  <p className="mt-2 font-semibold text-emerald-700">No breach exposure found for this password hash.</p>
+                )}
+                {!breachChecking && breachError && (
+                  <p className="mt-2 text-amber-700">{breachError}</p>
+                )}
               </div>
             )}
           </div>
@@ -178,15 +290,24 @@ export default function AuthPage() {
           {isSignup && (
             <div className="form-group">
               <label className="form-label">🔐 Confirm Password</label>
-              <input
-                type="password"
-                required
-                minLength={10}
-                className="form-input"
-                placeholder="Re-enter your password"
-                value={confirmPassword}
-                onChange={(event) => setConfirmPassword(event.target.value)}
-              />
+              <div className="relative">
+                <input
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  required
+                  minLength={10}
+                  className="form-input pr-24"
+                  placeholder="Re-enter your password"
+                  value={confirmPassword}
+                  onChange={(event) => setConfirmPassword(event.target.value)}
+                />
+                <button
+                  type="button"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-600"
+                  onClick={() => setShowConfirmPassword((prev) => !prev)}
+                >
+                  {showConfirmPassword ? 'Hide' : 'Show'}
+                </button>
+              </div>
             </div>
           )}
 
