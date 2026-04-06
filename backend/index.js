@@ -14,6 +14,7 @@ const {
 } = require('./middleware/rateLimit');
 
 const app = express();
+app.set('trust proxy', 1); // Enable trusting reverse proxy for rate limiting (Render, etc.)
 const port = process.env.PORT || 5000;
 
 const defaultOrigins = ['http://localhost:5173', 'https://ecom-52bb3.web.app'];
