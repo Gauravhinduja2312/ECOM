@@ -7,6 +7,7 @@ const {
   markSellerPayoutsPaid,
   updateOrderStatus,
 } = require('../controllers/adminController');
+const { acquireProductInventory } = require('../controllers/productController');
 const { requireAuth } = require('../middleware/auth');
 const { supabaseAdmin } = require('../services/supabaseAdmin');
 
@@ -42,5 +43,6 @@ router.patch('/product-submissions/:productId/review', requireAuth, requireAdmin
 router.get('/seller-payouts', requireAuth, requireAdmin, getSellerPayouts);
 router.patch('/seller-payouts/:sellerId/mark-paid', requireAuth, requireAdmin, markSellerPayoutsPaid);
 router.patch('/orders/:orderId/status', requireAuth, requireAdmin, updateOrderStatus);
+router.patch('/products/:productId/acquire', requireAuth, requireAdmin, acquireProductInventory);
 
 module.exports = router;
