@@ -14,9 +14,10 @@ const {
 } = require('./middleware/rateLimit');
 
 const app = express();
+app.set('trust proxy', 1);
 const port = process.env.PORT || 5000;
 
-const defaultOrigins = ['http://localhost:5173', 'https://ecom-52bb3.web.app'];
+const defaultOrigins = ['http://localhost:5173', 'https://ecom-52bb3.web.app', 'https://ecom-pn0s.onrender.com'];
 
 const configuredOrigins = (process.env.FRONTEND_URL || '')
   .split(',')
@@ -46,7 +47,7 @@ app.use(express.json());
 app.use(globalLimiter);
 
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', service: 'student-marketplace-backend' });
+  res.json({ status: 'ok', service: 'student-marketplace-backend', version: '2.1.0' });
 });
 
 app.use('/api/payment', paymentLimiter, paymentRoutes);
