@@ -226,6 +226,31 @@ async function verifyAndCreateOrder(req, res) {
       if (stockUpdateError) {
         return res.status(500).json({ error: stockUpdateError.message });
       }
+
+      await supabaseAdmin.from('inventory_logs').insert({
+        product_id: item.product_id,
+        change_type: 'sale',
+        quantity_changed: -Number(item.quantity),
+        previous_stock: Number(sourceProduct.stock),
+        new_stock: newStock,
+        recorded_by: userId
+      });
+    }
+
+    const pointsToAdd = Math.floor(normalizedComputedTotal / 100);
+    if (pointsToAdd > 0) {
+      const { data: userRaw } = await supabaseAdmin.from('users').select('loyalty_points').eq('id', userId).single();
+      if (userRaw) {
+        const newPoints = (userRaw.loyalty_points || 0) + pointsToAdd;
+        let newTier = 'bronze';
+        if (newPoints >= 500) newTier = 'silver';
+        if (newPoints >= 2000) newTier = 'gold';
+        
+        await supabaseAdmin.from('users').update({
+          loyalty_points: newPoints,
+          loyalty_tier: newTier
+        }).eq('id', userId);
+      }
     }
 
     const autoPayoutEnabled = String(process.env.AUTO_PAYOUT_ENABLED || 'false').toLowerCase() === 'true';

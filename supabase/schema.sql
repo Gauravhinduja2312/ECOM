@@ -453,3 +453,79 @@ for update using (bucket_id = 'product-images' and (owner = auth.uid() or public
 drop policy if exists "Admin can delete product images" on storage.objects;
 create policy "Owner or admin can delete product images" on storage.objects
 for delete using (bucket_id = 'product-images' and (owner = auth.uid() or public.is_admin()));
+
+-- Enable tracking of loyalty points
+alter table public.users add column if not exists loyalty_points integer not null default 0 check (loyalty_points >= 0);
+alter table public.users add column if not exists loyalty_tier text not null default 'bronze' check (loyalty_tier in ('bronze', 'silver', 'gold'));
+
+create table if not exists public.support_tickets (
+  id bigint generated always as identity primary key,
+  user_id uuid not null references public.users(id) on delete cascade,
+  order_id bigint references public.orders(id) on delete set null,
+  subject text not null,
+  description text not null,
+  status text not null default 'open' check (status in ('open', 'in_progress', 'resolved', 'closed')),
+  priority text not null default 'medium' check (priority in ('low', 'medium', 'high')),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.ticket_messages (
+  id bigint generated always as identity primary key,
+  ticket_id bigint not null references public.support_tickets(id) on delete cascade,
+  sender_id uuid not null references public.users(id) on delete cascade,
+  message text not null,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.returns (
+  id bigint generated always as identity primary key,
+  order_item_id bigint not null references public.order_items(id) on delete cascade,
+  user_id uuid not null references public.users(id) on delete cascade,
+  reason text not null,
+  admin_note text,
+  status text not null default 'requested' check (status in ('requested', 'approved', 'received', 'refunded', 'rejected')),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.inventory_logs (
+  id bigint generated always as identity primary key,
+  product_id bigint not null references public.products(id) on delete cascade,
+  change_type text not null check (change_type in ('sale', 'restock', 'return', 'adjustment')),
+  quantity_changed integer not null,
+  previous_stock integer not null check (previous_stock >= 0),
+  new_stock integer not null check (new_stock >= 0),
+  recorded_by uuid references public.users(id) on delete set null,
+  created_at timestamptz not null default now()
+);
+
+-- RLS for new tables
+alter table public.support_tickets enable row level security;
+alter table public.ticket_messages enable row level security;
+alter table public.returns enable row level security;
+alter table public.inventory_logs enable row level security;
+
+-- Support Tickets Policies
+create policy "Users can view own tickets" on public.support_tickets for select using (auth.uid() = user_id or public.is_admin());
+create policy "Users can insert own tickets" on public.support_tickets for insert with check (auth.uid() = user_id);
+create policy "Users can update own tickets" on public.support_tickets for update using (auth.uid() = user_id or public.is_admin());
+
+-- Ticket Messages Policies
+create policy "Users can view own ticket messages" on public.ticket_messages for select using (
+  exists (
+    select 1 from public.support_tickets t
+    where t.id = ticket_id and (t.user_id = auth.uid() or public.is_admin())
+  )
+);
+create policy "Users can insert own ticket messages" on public.ticket_messages for insert with check (auth.uid() = sender_id);
+
+-- Returns Policies
+create policy "Users can view own returns" on public.returns for select using (auth.uid() = user_id or public.is_admin());
+create policy "Users can insert own returns" on public.returns for insert with check (auth.uid() = user_id);
+create policy "Admin can update returns" on public.returns for update using (public.is_admin());
+
+-- Inventory Logs Policies
+create policy "Only admin can view inventory logs" on public.inventory_logs for select using (public.is_admin());
+create policy "Only admin can insert inventory logs" on public.inventory_logs for insert with check (public.is_admin());
+

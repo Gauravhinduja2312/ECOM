@@ -25,6 +25,9 @@ export default function AdminDashboardPage() {
   const [orderItems, setOrderItems] = useState({});
   const [users, setUsers] = useState([]);
   const [submissions, setSubmissions] = useState([]);
+  const [supportTickets, setSupportTickets] = useState([]);
+  const [returns, setReturns] = useState([]);
+  const [inventoryLogs, setInventoryLogs] = useState([]);
   const [reviewDrafts, setReviewDrafts] = useState({});
   const [reviewLoadingId, setReviewLoadingId] = useState(null);
   const [activeTab, setActiveTab] = useState('products');
@@ -44,11 +47,14 @@ export default function AdminDashboardPage() {
 
     setDataLoadError('');
 
-    const [analyticsResult, submissionsResult, payoutsResult, ordersResult] = await Promise.allSettled([
+    const [analyticsResult, submissionsResult, payoutsResult, ordersResult, ticketsResult, returnsResult, logsResult] = await Promise.allSettled([
       apiRequest('/api/admin/analytics', 'GET', session.access_token),
       apiRequest('/api/admin/product-submissions', 'GET', session.access_token),
       apiRequest('/api/admin/seller-payouts', 'GET', session.access_token),
       supabase.from('orders').select('*').order('created_at', { ascending: false }),
+      supabase.from('support_tickets').select('*, user:users(email)').order('created_at', { ascending: false }),
+      supabase.from('returns').select('*, user:users(email), order_item:order_items(product:products(name))').order('created_at', { ascending: false }),
+      supabase.from('inventory_logs').select('*, product:products(name)').order('created_at', { ascending: false }),
     ]);
 
     const loadErrors = [];
@@ -119,6 +125,18 @@ export default function AdminDashboardPage() {
     } else {
       loadErrors.push('orders');
       loadErrorDetails.push(`orders: ${ordersResult.reason?.message || 'failed'}`);
+    }
+
+    if (ticketsResult.status === 'fulfilled') {
+      setSupportTickets(ticketsResult.value.data || []);
+    }
+    
+    if (returnsResult.status === 'fulfilled') {
+      setReturns(returnsResult.value.data || []);
+    }
+    
+    if (logsResult.status === 'fulfilled') {
+      setInventoryLogs(logsResult.value.data || []);
     }
 
     if (loadErrors.length) {
@@ -479,6 +497,36 @@ export default function AdminDashboardPage() {
             }`}
           >
             📊 Analytics
+          </button>
+          <button
+            onClick={() => setActiveTab('support')}
+            className={`px-6 py-3 font-medium transition border-b-2 ${
+              activeTab === 'support'
+                ? 'border-indigo-600 text-indigo-600 bg-indigo-50'
+                : 'border-transparent text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            🎧 Support
+          </button>
+          <button
+            onClick={() => setActiveTab('returns')}
+            className={`px-6 py-3 font-medium transition border-b-2 ${
+              activeTab === 'returns'
+                ? 'border-indigo-600 text-indigo-600 bg-indigo-50'
+                : 'border-transparent text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            ↩️ Returns
+          </button>
+          <button
+            onClick={() => setActiveTab('inventoryLogs')}
+            className={`px-6 py-3 font-medium transition border-b-2 ${
+              activeTab === 'inventoryLogs'
+                ? 'border-indigo-600 text-indigo-600 bg-indigo-50'
+                : 'border-transparent text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            📋 Inventory
           </button>
         </div>
 
@@ -947,6 +995,102 @@ export default function AdminDashboardPage() {
                   {highStockProducts.length === 0 && <p className="text-sm text-slate-600">No high-stock products.</p>}
                 </div>
               </div>
+            </div>
+          </div>
+        )}
+        {/* Support Tickets Tab */}
+        {activeTab === 'support' && (
+          <div className="p-5 space-y-4">
+            <h2 className="text-xl font-semibold text-slate-900">Support Tickets (Helpdesk)</h2>
+            <div className="space-y-4">
+              {supportTickets.length === 0 ? (
+                <p className="text-sm text-slate-600 text-center py-4">No support tickets found.</p>
+              ) : (
+                supportTickets.map((ticket) => (
+                  <div key={ticket.id} className="rounded-xl border border-slate-200 bg-white p-4">
+                    <div className="flex justify-between">
+                      <div>
+                        <p className="font-semibold text-slate-900">{ticket.subject}</p>
+                        <p className="text-sm text-slate-600 mt-1">{ticket.description}</p>
+                        <p className="text-xs text-slate-500 mt-2">By: {ticket.user?.email || ticket.user_id}</p>
+                      </div>
+                      <div className="text-right">
+                        <span className={`px-2 py-1 text-xs font-semibold rounded-full uppercase ${
+                          ticket.status === 'open' ? 'bg-blue-100 text-blue-800' :
+                          ticket.status === 'in_progress' ? 'bg-amber-100 text-amber-800' :
+                          'bg-emerald-100 text-emerald-800'
+                        }`}>
+                          {ticket.status.replace('_', ' ')}
+                        </span>
+                        <p className="text-xs text-slate-500 mt-2">{new Date(ticket.created_at).toLocaleDateString()}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Returns Tab */}
+        {activeTab === 'returns' && (
+          <div className="p-5 space-y-4">
+            <h2 className="text-xl font-semibold text-slate-900">Returns Management</h2>
+            <div className="space-y-4">
+              {returns.length === 0 ? (
+                <p className="text-sm text-slate-600 text-center py-4">No Returns found.</p>
+              ) : (
+                returns.map((ret) => (
+                  <div key={ret.id} className="rounded-xl border border-rose-200 bg-rose-50 p-4">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="font-semibold text-slate-900">Return #{ret.id}</p>
+                        <p className="text-sm font-medium text-rose-800">{ret.order_item?.product?.name || `Product ID ${ret.order_item?.product_id}`}</p>
+                        <p className="text-sm text-slate-700 mt-1">Reason: {ret.reason}</p>
+                        <p className="text-xs text-slate-500 mt-1">Requested by: {ret.user?.email || ret.user_id}</p>
+                      </div>
+                      <span className={`px-2 py-1 text-xs font-semibold rounded-full capitalize ${
+                        ret.status === 'requested' ? 'bg-amber-200 text-amber-900' :
+                        ret.status === 'approved' ? 'bg-emerald-200 text-emerald-900' :
+                        'bg-red-200 text-red-900'
+                      }`}>
+                        {ret.status}
+                      </span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Inventory Logs Tab */}
+        {activeTab === 'inventoryLogs' && (
+          <div className="p-5 space-y-4">
+            <h2 className="text-xl font-semibold text-slate-900">Inventory Logs</h2>
+            <div className="space-y-2">
+              {inventoryLogs.length === 0 ? (
+                <p className="text-sm text-slate-600 text-center py-4">No inventory logs found.</p>
+              ) : (
+                inventoryLogs.map((log) => (
+                  <div key={log.id} className="rounded-lg border border-slate-200 bg-slate-50 p-3 flex justify-between items-center text-sm">
+                    <div>
+                      <p className="font-semibold text-slate-900">{log.product?.name || `Product ID ${log.product_id}`}</p>
+                      <p className="text-xs text-slate-600">{new Date(log.created_at).toLocaleString()}</p>
+                    </div>
+                    <div className="flex gap-4 items-center">
+                      <span className="capitalize text-slate-700">{log.change_type}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-slate-500">{log.previous_stock}</span>
+                        <span>&rarr;</span>
+                        <span className={`font-bold ${log.quantity_changed > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                          {log.new_stock}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         )}
