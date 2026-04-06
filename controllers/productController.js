@@ -315,8 +315,66 @@ async function respondToPriceOffer(req, res) {
   }
 }
 
+async function acquireProductInventory(req, res) {
+  try {
+    const productId = Number(req.params.productId);
+    const { finalPrice } = req.body;
+
+    if (!req.user || !req.user.is_admin) {
+      return res.status(403).json({ error: 'Only admins can acquire inventory' });
+    }
+
+    if (!isPositiveNumber(finalPrice) || finalPrice > 100000) {
+      return res.status(400).json({ error: 'Invalid final retail price' });
+    }
+
+    const { data: product, error: productError } = await supabaseAdmin
+      .from('products')
+      .select('*')
+      .eq('id', productId)
+      .single();
+
+    if (productError || !product) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+
+    if (product.price_offer_status !== 'accepted') {
+      return res.status(400).json({ error: 'Student has not accepted a price offer yet' });
+    }
+
+    const payload = {
+      seller_id: null,
+      final_price: Number(finalPrice),
+      price: Number(finalPrice),
+      verification_status: 'verified',
+      admin_review_note: `Acquired by Campus Store. Originally paid student ₹${product.price}`,
+      updated_at: new Date().toISOString(),
+    };
+
+    const { data: updatedProduct, error: updateError } = await supabaseAdmin
+      .from('products')
+      .update(payload)
+      .eq('id', productId)
+      .select('*')
+      .single();
+
+    if (updateError) {
+      return res.status(500).json({ error: updateError.message });
+    }
+
+    return res.json({
+      success: true,
+      message: 'Product acquired and live on storefront',
+      product: updatedProduct,
+    });
+  } catch (error) {
+    return res.status(500).json({ error: error.message || 'Failed to acquire product' });
+  }
+}
+
 module.exports = {
   prepareListingFeePayment,
   verifyListingFeeAndCreate,
   respondToPriceOffer,
+  acquireProductInventory,
 };
