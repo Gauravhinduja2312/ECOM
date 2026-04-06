@@ -112,6 +112,17 @@ export default function Navbar() {
             </>
           ) : null}
 
+          {profile?.loyalty_tier && (
+            <span className={`hidden sm:inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-bold uppercase tracking-wider shadow-sm transition hover-lift ${
+              profile.loyalty_tier === 'gold' ? 'bg-amber-100 text-amber-700 border border-amber-300 shadow-[0_0_10px_rgba(251,191,36,0.3)]' :
+              profile.loyalty_tier === 'silver' ? 'bg-slate-200 text-slate-700 border border-slate-300' :
+              'bg-orange-50 text-orange-800 border border-orange-200'
+            }`}>
+              {profile.loyalty_tier === 'gold' ? '🏆 ' : profile.loyalty_tier === 'silver' ? '🥈 ' : '🥉 '}
+              {profile.loyalty_tier}
+            </span>
+          )}
+
           {/* Auth Button */}
           {!profile ? (
             <Link

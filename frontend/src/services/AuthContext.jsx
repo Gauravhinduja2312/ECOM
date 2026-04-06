@@ -16,13 +16,27 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   const fetchProfile = async (userId) => {
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from('users')
-      .select('id, email, role, full_name, phone')
+      .select('id, email, role, full_name, phone, loyalty_points, loyalty_tier')
       .eq('id', userId)
       .maybeSingle();
 
+    if (error && error.code === '42703') {
+      // Fallback if the Supabase database hasn't been migrated yet!
+      console.warn('Schema migration missing! Falling back to safe profile fetch...');
+      const fallback = await supabase
+        .from('users')
+        .select('id, email, role, full_name, phone')
+        .eq('id', userId)
+        .maybeSingle();
+      
+      data = fallback.data;
+      error = fallback.error;
+    }
+
     if (error) {
+      console.error('Failed to fetch profile:', error.message);
       setProfile((prev) => prev || null);
       return;
     }

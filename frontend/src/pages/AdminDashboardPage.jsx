@@ -32,6 +32,8 @@ export default function AdminDashboardPage() {
   const [reviewLoadingId, setReviewLoadingId] = useState(null);
   const [activeTab, setActiveTab] = useState('products');
   const [productStatusTab, setProductStatusTab] = useState('pending');
+  const [acquireDrafts, setAcquireDrafts] = useState({});
+  const [acquireLoadingId, setAcquireLoadingId] = useState(null);
   const [downloadingInvoiceId, setDownloadingInvoiceId] = useState(null);
   const [sellerPayouts, setSellerPayouts] = useState([]);
   const [payoutReferenceDrafts, setPayoutReferenceDrafts] = useState({});
@@ -366,8 +368,37 @@ export default function AdminDashboardPage() {
   };
 
   const pendingProducts = getProductsByStatus('pending');
-  const verifiedProducts = getProductsByStatus('verified');
+  const verifiedProducts = getProductsByStatus('verified'); // Now represents "Platform Live Inventory"
   const rejectedProducts = getProductsByStatus('rejected');
+
+  const setAcquireDraftValue = (submissionId, value) => {
+    setAcquireDrafts((prev) => ({
+      ...prev,
+      [submissionId]: value,
+    }));
+  };
+
+  const handleAcquire = async (submissionId) => {
+    try {
+      setAcquireLoadingId(submissionId);
+      const finalPrice = acquireDrafts[submissionId];
+
+      if (!finalPrice || isNaN(finalPrice)) {
+        alert("Please enter a valid retail price");
+        return;
+      }
+
+      await apiRequest(`/api/products/admin/${submissionId}/acquire`, 'PATCH', session.access_token, {
+        finalPrice: Number(finalPrice)
+      });
+
+      await fetchAdminData();
+    } catch (error) {
+      alert(error.message || 'Failed to acquire product');
+    } finally {
+      setAcquireLoadingId(null);
+    }
+  };
   const outOfStockProducts = submissions.filter((sub) => Number(sub.stock || 0) <= 0);
   const lowStockProducts = submissions.filter((sub) => {
     const stock = Number(sub.stock || 0);
@@ -583,6 +614,8 @@ export default function AdminDashboardPage() {
                 const isPending = submission.verification_status === 'pending';
                 const isVerified = submission.verification_status === 'verified';
                 const isRejected = submission.verification_status === 'rejected';
+                const isAwaitingStudent = isPending && submission.price_offer_status === 'pending_student_response';
+                const isAcceptedByStudent = isPending && submission.price_offer_status === 'accepted';
 
                 return (
                   <div key={submission.id} className={`rounded-xl border p-4 ${
@@ -599,8 +632,9 @@ export default function AdminDashboardPage() {
                           Status: <span className={`inline-block px-2 py-0.5 rounded text-xs font-semibold ${
                             isVerified ? 'bg-emerald-200 text-emerald-900' :
                             isRejected ? 'bg-red-200 text-red-900' :
+                            isAcceptedByStudent ? 'bg-blue-200 text-blue-900' :
                             'bg-amber-200 text-amber-900'
-                          }`}>{submission.verification_status}</span> • Offer: {submission.price_offer_status}
+                          }`}>{isVerified ? 'Live Inventory' : submission.verification_status}</span> • Offer: {submission.price_offer_status}
                         </p>
                       </div>
                       <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">
@@ -610,61 +644,74 @@ export default function AdminDashboardPage() {
 
                     {isPending ? (
                       <>
-                        <div className="mt-3 grid gap-2 sm:grid-cols-3">
-                          <input
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            value={draft.proposedPrice ?? ''}
-                            onChange={(event) => setDraftValue(submission.id, 'proposedPrice', event.target.value)}
-                            className="form-input"
-                            placeholder="Counter / approved price"
-                          />
-                          <input
-                            type="number"
-                            min="0"
-                            max="100"
-                            step="0.01"
-                            value={draft.commissionRate ?? 10}
-                            onChange={(event) => setDraftValue(submission.id, 'commissionRate', event.target.value)}
-                            className="form-input"
-                            placeholder="Commission %"
-                          />
-                          <input
-                            type="text"
-                            value={draft.note ?? ''}
-                            onChange={(event) => setDraftValue(submission.id, 'note', event.target.value)}
-                            className="form-input"
-                            placeholder="Admin note"
-                          />
-                        </div>
+                        {isAcceptedByStudent ? (
+                          <div className="mt-4 rounded-lg bg-indigo-50 p-3 border border-indigo-200">
+                            <p className="text-sm font-semibold text-indigo-900 mb-2">Student Accepted! Pay externally, then set Final Retail Price to Acquire.</p>
+                            <div className="flex flex-wrap gap-2">
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={acquireDrafts[submission.id] ?? submission.price ?? ''}
+                                onChange={(event) => setAcquireDraftValue(submission.id, event.target.value)}
+                                className="form-input max-w-48"
+                                placeholder="Retail Price"
+                              />
+                              <button
+                                type="button"
+                                disabled={acquireLoadingId === submission.id}
+                                onClick={() => handleAcquire(submission.id)}
+                                className="btn-gradient px-4 py-2 text-sm"
+                              >
+                                {acquireLoadingId === submission.id ? 'Acquiring...' : 'Take Ownership & Make Live'}
+                              </button>
+                            </div>
+                          </div>
+                        ) : isAwaitingStudent ? (
+                           <div className="mt-3">
+                             <p className="text-sm font-medium text-violet-700">Counter offer sent: {formatCurrency(submission.proposed_price)}. Awaiting student response.</p>
+                           </div>
+                        ) : (
+                          <>
+                            <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={draft.proposedPrice ?? ''}
+                                onChange={(event) => setDraftValue(submission.id, 'proposedPrice', event.target.value)}
+                                className="form-input"
+                                placeholder="Buyout price offer to student"
+                              />
+                              <input
+                                type="text"
+                                value={draft.note ?? ''}
+                                onChange={(event) => setDraftValue(submission.id, 'note', event.target.value)}
+                                className="form-input"
+                                placeholder="Admin note"
+                              />
+                            </div>
 
-                        <div className="mt-3 flex flex-wrap gap-2">
-                          <button
-                            type="button"
-                            disabled={isLoading}
-                            onClick={() => handleReview(submission.id, 'verify')}
-                            className="btn-gradient px-3 py-2 text-sm"
-                          >
-                            Verify
-                          </button>
-                          <button
-                            type="button"
-                            disabled={isLoading}
-                            onClick={() => handleReview(submission.id, 'counter')}
-                            className="btn-gradient-secondary px-3 py-2 text-sm"
-                          >
-                            Send Counter Price
-                          </button>
-                          <button
-                            type="button"
-                            disabled={isLoading}
-                            onClick={() => handleReview(submission.id, 'reject')}
-                            className="rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-100 disabled:opacity-60"
-                          >
-                            Reject
-                          </button>
-                        </div>
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              <button
+                                type="button"
+                                disabled={isLoading}
+                                onClick={() => handleReview(submission.id, 'counter')}
+                                className="btn-gradient px-3 py-2 text-sm"
+                              >
+                                Send Buyout Offer
+                              </button>
+                              <button
+                                type="button"
+                                disabled={isLoading}
+                                onClick={() => handleReview(submission.id, 'reject')}
+                                className="rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-100 disabled:opacity-60"
+                              >
+                                Reject Submission
+                              </button>
+                            </div>
+                          </>
+                        )}
                       </>
                     ) : (
                       <div className="mt-3">

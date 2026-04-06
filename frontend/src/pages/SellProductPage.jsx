@@ -16,23 +16,6 @@ const initialForm = {
   is_sponsored: false,
 };
 
-const LISTING_FEE_AMOUNT = 10;
-const SPONSORED_FEE_AMOUNT = 49;
-
-function loadRazorpayScript() {
-  if (window.Razorpay) {
-    return Promise.resolve(true);
-  }
-
-  return new Promise((resolve) => {
-    const script = document.createElement('script');
-    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-    script.onload = () => resolve(true);
-    script.onerror = () => resolve(false);
-    document.body.appendChild(script);
-  });
-}
-
 export default function SellProductPage() {
   const { profile, session } = useAuth();
   const [form, setForm] = useState(initialForm);
@@ -195,79 +178,23 @@ export default function SellProductPage() {
 
       if (error) throw error;
 
-      let createdListingResult = null;
-
       if (!editingId) {
         if (!session?.access_token) {
           throw new Error('Please sign in again to continue.');
         }
 
-        const prepareResult = await apiRequest('/api/products/listing-fee/prepare', 'POST', session.access_token, {
+        createdListingResult = await apiRequest('/api/products/store/offer', 'POST', session.access_token, {
           listingDraft: payload,
         });
-
-        if (prepareResult.requiresPayment) {
-          const isRazorpayLoaded = await loadRazorpayScript();
-          if (!isRazorpayLoaded) {
-            throw new Error('Could not load payment gateway. Please try again.');
-          }
-
-          const paymentResult = await new Promise((resolve, reject) => {
-            const razorpayInstance = new window.Razorpay({
-              key: import.meta.env.VITE_RAZORPAY_KEY_ID,
-              amount: prepareResult.order.amount,
-              currency: prepareResult.order.currency,
-              name: 'Student Marketplace',
-              description: 'Listing & sponsored fee payment',
-              order_id: prepareResult.order.id,
-              handler: (response) => resolve(response),
-              modal: {
-                ondismiss: () => reject(new Error('Payment cancelled by user.')),
-              },
-              prefill: {
-                email: profile?.email || '',
-              },
-              theme: { color: '#4f46e5' },
-            });
-
-            razorpayInstance.open();
-          });
-
-          createdListingResult = await apiRequest('/api/products/listing-fee/verify-and-create', 'POST', session.access_token, {
-            listingDraft: payload,
-            razorpay_order_id: paymentResult.razorpay_order_id,
-            razorpay_payment_id: paymentResult.razorpay_payment_id,
-            razorpay_signature: paymentResult.razorpay_signature,
-          });
-        } else {
-          createdListingResult = await apiRequest('/api/products/listing-fee/verify-and-create', 'POST', session.access_token, {
-            listingDraft: payload,
-          });
-        }
       }
 
       setForm(initialForm);
       setEditingId(null);
 
       if (editingId) {
-        setSuccessMessage('Your listing has been updated successfully! ✨');
+        setSuccessMessage('Your store offer has been updated successfully! ✨');
       } else {
-        const chargedListingFee = Number(createdListingResult?.feeBreakup?.listingFee || 0);
-        const chargedSponsoredFee = Number(createdListingResult?.feeBreakup?.sponsoredFee || 0);
-
-        const feeNotes = [];
-        if (chargedListingFee > 0) {
-          feeNotes.push(`Listing fee: ₹${chargedListingFee.toFixed(2)}`);
-        }
-        if (chargedSponsoredFee > 0) {
-          feeNotes.push(`Sponsored fee: ₹${chargedSponsoredFee.toFixed(2)}`);
-        }
-
-        if (feeNotes.length > 0) {
-          setSuccessMessage(`Your product has been posted! ${feeNotes.join(' • ')}`);
-        } else {
-          setSuccessMessage('Your product has been posted successfully! First listing is free. 🎉');
-        }
+        setSuccessMessage('Your product has been submitted to the Administration! Awaiting price offer. 🎉');
       }
 
       await fetchMyListings();
@@ -352,22 +279,14 @@ export default function SellProductPage() {
       <div className="glass-panel soft-ring rounded-2xl p-6 sm:p-7">
         <h1 className="page-title inline-flex items-center gap-2 text-slate-900">
           <span className="icon-pill">🧑‍🎓</span>
-          Sell Your Product
+          Sell to Campus Store
         </h1>
         <p className="mt-2 text-sm text-slate-600">
-          Post your item so other students can discover and buy it.
+          Submit your product to us with an asking price. If we accept, we will pay you via UPI and physically acquire the item to list it on our unified storefront.
         </p>
         {profile?.email ? (
-          <p className="mt-1 text-xs text-slate-500">Posting as: {profile.email}</p>
+          <p className="mt-1 text-xs text-slate-500">Submitting as: {profile.email}</p>
         ) : null}
-
-        <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-          Listing fee policy: 1st listing is free. From 2nd listing onward, ₹{LISTING_FEE_AMOUNT.toFixed(2)} is charged per new listing.
-        </div>
-
-        <div className="mt-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs text-indigo-800">
-          Sponsored listing policy: promote your listing at the top with a ₹{SPONSORED_FEE_AMOUNT.toFixed(2)} fee for 7 days.
-        </div>
 
         <div className="mt-4 space-y-2">
           <SuccessMessage message={successMessage} />
@@ -424,7 +343,7 @@ export default function SellProductPage() {
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="form-group">
-              <label className="form-label">Price (₹)</label>
+              <label className="form-label">Asking Price (₹)</label>
               <input
                 className="form-input"
                 type="number"
@@ -461,19 +380,9 @@ export default function SellProductPage() {
             />
           </div>
 
-          <label className="flex items-start gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm text-indigo-900">
-            <input
-              type="checkbox"
-              checked={Boolean(form.is_sponsored)}
-              onChange={(event) => onChange('is_sponsored', event.target.checked)}
-              disabled={Boolean(editingId)}
-              className="mt-0.5"
-            />
-            <span>
-              Mark this as Sponsored Listing (₹{SPONSORED_FEE_AMOUNT.toFixed(2)} for 7 days)
-              {editingId ? ' — sponsorship can only be changed while creating a listing.' : ''}
-            </span>
-          </label>
+          <div className="hidden">
+            {/* Kept hidden for backward compatibility in the DB schema */}
+          </div>
 
           <div className="form-group">
             <label className="form-label">Product Image</label>
@@ -499,7 +408,7 @@ export default function SellProductPage() {
             disabled={saving || uploading}
             className="btn-gradient w-full px-5 py-2.5"
           >
-            {saving ? 'Saving...' : editingId ? 'Update Listing' : 'Post Product'}
+            {saving ? 'Saving...' : editingId ? 'Update Offer' : 'Submit Product Base'}
           </button>
 
           {editingId ? (
@@ -518,13 +427,13 @@ export default function SellProductPage() {
       </div>
 
       <div className="glass-panel soft-ring mt-6 rounded-2xl p-6 sm:p-7">
-        <h2 className="text-xl font-bold text-slate-900">My Listings</h2>
-        <p className="mt-1 text-sm text-slate-600">Edit or remove products that you posted.</p>
+        <h2 className="text-xl font-bold text-slate-900">My Sales Offers</h2>
+        <p className="mt-1 text-sm text-slate-600">Review products you have pitched to the store.</p>
 
         {loadingListings ? (
-          <p className="mt-4 text-sm text-slate-600">Loading your listings...</p>
+          <p className="mt-4 text-sm text-slate-600">Loading your pitches...</p>
         ) : myListings.length === 0 ? (
-          <p className="mt-4 text-sm text-slate-600">You have not posted any products yet.</p>
+          <p className="mt-4 text-sm text-slate-600">You have not submitted any products to the store yet.</p>
         ) : (
           <div className="mt-4 space-y-3">
             {myListings.map((listing) => (
