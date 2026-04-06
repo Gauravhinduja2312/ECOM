@@ -320,10 +320,7 @@ async function acquireProductInventory(req, res) {
     const productId = Number(req.params.productId);
     const { finalPrice } = req.body;
 
-    if (!req.user || !req.user.is_admin) {
-      return res.status(403).json({ error: 'Only admins can acquire inventory' });
-    }
-
+    // Note: admin check is handled by requireAdmin middleware in the route
     if (!isPositiveNumber(finalPrice) || finalPrice > 100000) {
       return res.status(400).json({ error: 'Invalid final retail price' });
     }
