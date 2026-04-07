@@ -86,7 +86,7 @@ export default function Navbar() {
                   >
                     <div className="hidden lg:block text-right">
                       <p className="text-[8px] font-black text-slate-500 tracking-widest uppercase">Account</p>
-                      <p className="text-[10px] font-black text-white tracking-tighter uppercase -mt-1">{profile.email?.split('@')[0]}</p>
+                      <p className="text-[10px] font-black text-white tracking-tighter uppercase -mt-1">{profile.full_name || profile.email?.split('@')[0]}</p>
                     </div>
                     <div className={`h-8 w-8 rounded-xl flex items-center justify-center text-sm border-2 transition-all group-hover:scale-110 ${
                       profile.loyalty_tier === 'gold' ? 'border-amber-400 bg-amber-400/10 text-amber-400' :

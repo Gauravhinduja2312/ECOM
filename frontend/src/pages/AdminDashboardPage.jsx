@@ -53,7 +53,7 @@ export default function AdminDashboardPage() {
         apiRequest('/api/admin/analytics', 'GET', session.access_token),
         apiRequest('/api/admin/product-submissions', 'GET', session.access_token),
         apiRequest('/api/admin/seller-payouts', 'GET', session.access_token),
-        supabase.from('orders').select('*').order('created_at', { ascending: false }),
+        apiRequest('/api/admin/orders', 'GET', session.access_token),
         supabase.from('support_tickets').select('*, user:users(email)').order('created_at', { ascending: false }),
         supabase.from('returns').select('*, user:users(email), order_item:order_items(product:products(name))').order('created_at', { ascending: false }),
         supabase.from('inventory_logs').select('*, product:products(name)').order('created_at', { ascending: false }),
@@ -89,19 +89,9 @@ export default function AdminDashboardPage() {
       }
 
       if (ordersResult.status === 'fulfilled') {
-        const { data: ordersData } = ordersResult.value;
+        const { orders: ordersData, orderItems: itemsMap } = ordersResult.value;
         setOrders(ordersData || []);
-        const itemsMap = {};
-        if (ordersData && ordersData.length > 0) {
-          for (const order of ordersData) {
-            const { data: items } = await supabase
-              .from('order_items')
-              .select('*, product:products(name)')
-              .eq('order_id', order.id);
-            itemsMap[order.id] = items || [];
-          }
-        }
-        setOrderItems(itemsMap);
+        setOrderItems(itemsMap || {});
       }
 
       if (ticketsResult.status === 'fulfilled') setSupportTickets(ticketsResult.value.data || []);
@@ -218,7 +208,7 @@ export default function AdminDashboardPage() {
   }[productStatusTab] || [];
 
   return (
-    <div className="bg-[#020617] min-h-screen pt-64 pb-20 text-white">
+    <div className="bg-[#020617] min-h-screen pt-48 pb-20 text-white">
       <div className="mx-auto max-w-7xl px-6 space-y-12">
         {/* Header Section */}
         <header className="flex flex-col md:flex-row justify-between items-end gap-8">

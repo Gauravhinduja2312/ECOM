@@ -43,6 +43,7 @@ router.patch('/product-submissions/:productId/review', requireAuth, requireAdmin
 router.get('/seller-payouts', requireAuth, requireAdmin, getSellerPayouts);
 router.patch('/seller-payouts/:sellerId/mark-paid', requireAuth, requireAdmin, markSellerPayoutsPaid);
 router.patch('/orders/:orderId/status', requireAuth, requireAdmin, updateOrderStatus);
+router.get('/orders', requireAuth, requireAdmin, getOrders);
 router.patch('/products/:productId/acquire', requireAuth, requireAdmin, acquireProductInventory);
 
 module.exports = router;

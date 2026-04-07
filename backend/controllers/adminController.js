@@ -497,6 +497,42 @@ async function updateOrderStatus(req, res) {
   }
 }
 
+async function getOrders(req, res) {
+  try {
+    const { data: orders, error: ordersError } = await supabaseAdmin
+      .from('orders')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (ordersError) {
+      return res.status(500).json({ error: ordersError.message });
+    }
+
+    const orderIds = (orders || []).map(o => o.id);
+    let itemsByOrderId = {};
+
+    if (orderIds.length > 0) {
+      const { data: items, error: itemsError } = await supabaseAdmin
+        .from('order_items')
+        .select('*, product:products(name)')
+        .in('order_id', orderIds);
+
+      if (itemsError) {
+        return res.status(500).json({ error: itemsError.message });
+      }
+
+      items.forEach(item => {
+        if (!itemsByOrderId[item.order_id]) itemsByOrderId[item.order_id] = [];
+        itemsByOrderId[item.order_id].push(item);
+      });
+    }
+
+    return res.json({ orders, orderItems: itemsByOrderId });
+  } catch (error) {
+    return res.status(500).json({ error: error.message || 'Failed to fetch orders' });
+  }
+}
+
 module.exports = {
   getAnalytics,
   getProductSubmissions,
