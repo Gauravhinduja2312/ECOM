@@ -3,16 +3,16 @@
 @tailwind utilities;
 
 :root {
-  /* Elite Midnight Luxe Palette */
-  --elite-midnight: 226 42% 4%;
-  --elite-deep: 224 43% 8%;
-  --elite-slate: 224 20% 14%;
-  --elite-primary: 262 83% 58%;
-  --elite-secondary: 239 84% 67%;
-  --elite-accent: 189 94% 43%;
-  --elite-silver: 222 20% 95%;
-  --elite-glass: 255 255 255 / 0.05;
-  --elite-border: 255 255 255 / 0.12;
+  /* Standard Palette */
+  --primary-midnight: 226 42% 4%;
+  --primary-deep: 224 43% 8%;
+  --primary-slate: 224 20% 14%;
+  --primary-color: 262 83% 58%;
+  --primary-secondary: 239 84% 67%;
+  --primary-accent: 189 94% 43%;
+  --primary-silver: 222 20% 95%;
+  --primary-glass: 255 255 255 / 0.05;
+  --primary-border: 255 255 255 / 0.12;
   
   /* System Tokens */
   --radius-xl: 2.5rem;
@@ -31,7 +31,7 @@ body {
   margin: 0;
   font-family: 'Plus Jakarta Sans', sans-serif;
   background-color: #020617; /* Slate 950 for guaranteed dark background */
-  color: hsl(var(--elite-silver));
+  color: hsl(var(--primary-silver));
   overflow-x: hidden;
 }
 
@@ -49,7 +49,7 @@ h1, h2, h3, h4, h5, h6 {
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
 }
 
-.elite-container {
+.primary-container {
   max-width: 1200px;
   margin: 0 auto;
   padding: 0 1.5rem;
@@ -57,10 +57,10 @@ h1, h2, h3, h4, h5, h6 {
 
 /* --- Premium Components --- */
 
-.glass-elite {
-  background: var(--elite-glass);
+.glass-primary {
+  background: var(--primary-glass);
   backdrop-filter: blur(24px) saturate(180%);
-  border: 1px solid var(--elite-border);
+  border: 1px solid var(--primary-border);
   box-shadow: var(--shadow-luxe);
 }
 
@@ -95,7 +95,7 @@ h1, h2, h3, h4, h5, h6 {
 
 /* --- Buttons & Interactables --- */
 
-.btn-elite {
+.btn-primary {
   position: relative;
   display: inline-flex;
   align-items: center;
@@ -115,13 +115,13 @@ h1, h2, h3, h4, h5, h6 {
   cursor: pointer;
 }
 
-.btn-elite:hover {
+.btn-primary:hover {
   transform: translateY(-4px) scale(1.02);
   box-shadow: 0 20px 30px -10px rgba(79, 70, 229, 0.6);
   filter: brightness(1.1);
 }
 
-.btn-elite::after {
+.btn-primary::after {
   content: '';
   position: absolute;
   top: -50%;
@@ -133,13 +133,13 @@ h1, h2, h3, h4, h5, h6 {
   transition: transform 0.6s ease;
 }
 
-.btn-elite:hover::after {
+.btn-primary:hover::after {
   transform: translateX(100%) rotate(45deg);
 }
 
 /* --- Inputs --- */
 
-.elite-input {
+.standard-input {
   width: 100%;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -150,7 +150,7 @@ h1, h2, h3, h4, h5, h6 {
   transition: all 0.3s;
 }
 
-.elite-input:focus {
+.standard-input:focus {
   outline: none;
   background: rgba(255, 255, 255, 0.05);
   border-color: #6366f1;
@@ -159,14 +159,14 @@ h1, h2, h3, h4, h5, h6 {
 
 /* --- Utilities --- */
 
-.text-gradient-elite {
+.text-gradient-primary {
   background: linear-gradient(135deg, #fff 0%, rgba(255,255,255,0.6) 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
 }
 
-.text-accent-elite {
+.text-accent-primary {
   background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
   -webkit-background-clip: text;
   background-clip: text;
@@ -175,32 +175,32 @@ h1, h2, h3, h4, h5, h6 {
 
 /* --- Animations --- */
 
-@keyframes float-elite {
+@keyframes float-standard {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-20px); }
 }
 
-.animate-float-elite {
-  animation: float-elite 8s ease-in-out infinite;
+.animate-float-standard {
+  animation: float-standard 8s ease-in-out infinite;
 }
 
-.stagger-elite > * {
+.stagger-standard > * {
   opacity: 0;
-  animation: elite-reveal 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: standard-reveal 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-@keyframes elite-reveal {
+@keyframes standard-reveal {
   from { opacity: 0; transform: translateY(30px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
-.stagger-elite *:nth-child(1) { animation-delay: 0.1s; }
-.stagger-elite *:nth-child(2) { animation-delay: 0.2s; }
-.stagger-elite *:nth-child(3) { animation-delay: 0.3s; }
-.stagger-elite *:nth-child(4) { animation-delay: 0.4s; }
+.stagger-standard *:nth-child(1) { animation-delay: 0.1s; }
+.stagger-standard *:nth-child(2) { animation-delay: 0.2s; }
+.stagger-standard *:nth-child(3) { animation-delay: 0.3s; }
+.stagger-standard *:nth-child(4) { animation-delay: 0.4s; }
 
 /* Backward Compatibility Utility Hooks */
-.btn-elite-legacy { @apply btn-elite; }
-.glass-elite-legacy { @apply glass-elite; }
-.text-gradient-elite-legacy { @apply text-gradient-elite; }
-.animate-float-elite-legacy { animation: float-elite 8s ease-in-out infinite; }
+.btn-primary-legacy { @apply btn-primary; }
+.glass-primary-legacy { @apply glass-primary; }
+.text-gradient-primary-legacy { @apply text-gradient-primary; }
+.animate-float-standard-legacy { animation: float-standard 8s ease-in-out infinite; }

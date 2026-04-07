@@ -36,7 +36,7 @@ export default function ProductCard({ product, onAdd }) {
   }, [product]);
 
   return (
-    <article className="group animate-elite-reveal glass-elite rounded-3xl p-6 transition-all duration-500 hover:-translate-y-2 hover:shadow-[0_40px_80px_-20px_rgba(0,0,0,0.6)]">
+    <article className="group animate-standard-reveal glass-primary rounded-3xl p-6 transition-all duration-500 hover:-translate-y-2 hover:shadow-[0_40px_80px_-20px_rgba(0,0,0,0.6)]">
       <div className="relative overflow-hidden rounded-xl">
         <img
           src={imageSrc}
@@ -70,7 +70,7 @@ export default function ProductCard({ product, onAdd }) {
         <div className="flex items-center gap-3 py-1">
           <StarRating rating={averageRating} size="sm" />
           <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">
-            {averageRating > 0 ? `${totalReviews} LOGS` : 'ZERO LOGS'}
+            {averageRating > 0 ? `${totalReviews} REVIEWS` : 'NO REVIEWS'}
           </span>
         </div>
 
@@ -89,11 +89,11 @@ export default function ProductCard({ product, onAdd }) {
         </Link>
         <button
           type="button"
-          className="btn-elite flex-2 px-6 py-3 text-[10px] tracking-widest disabled:opacity-30 disabled:cursor-not-allowed"
+          className="btn-primary flex-2 px-6 py-3 text-[10px] tracking-widest disabled:opacity-30 disabled:cursor-not-allowed"
           onClick={() => onAdd(product.id)}
           disabled={!inStock}
         >
-          {inStock ? 'Acquire' : 'Depleted'}
+          {inStock ? 'Add to Cart' : 'Sold Out'}
         </button>
       </div>
     </article>

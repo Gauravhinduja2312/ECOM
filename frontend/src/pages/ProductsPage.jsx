@@ -180,7 +180,7 @@ export default function ProductsPage() {
   if (loading) return <Loader text="Loading shop..." />;
 
   return (
-    <div className="bg-[#020617] min-h-screen pt-64 pb-20 stagger-elite text-white">
+    <div className="bg-[#020617] min-h-screen pt-64 pb-20 stagger-standard text-white">
       <section className="mx-auto max-w-7xl px-6">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-16">
         <div>
@@ -196,7 +196,7 @@ export default function ProductsPage() {
         </div>
       </div>
 
-      <div className="glass-elite grid gap-8 rounded-[2.5rem] p-10 lg:grid-cols-2 mb-20 border border-white/5 shadow-2xl">
+      <div className="glass-primary grid gap-8 rounded-[2.5rem] p-10 lg:grid-cols-2 mb-20 border border-white/5 shadow-2xl">
         <div className="space-y-3">
           <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-4 block">Search</label>
           <input
@@ -204,7 +204,7 @@ export default function ProductsPage() {
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Search for items, books, or electronics..."
-            className="elite-input px-8 py-5"
+            className="standard-input px-8 py-5"
           />
         </div>
         <div className="space-y-3">
@@ -212,7 +212,7 @@ export default function ProductsPage() {
           <select
             value={category}
             onChange={(event) => setCategory(event.target.value)}
-            className="elite-input px-8 py-5"
+            className="standard-input px-8 py-5"
           >
             {categories.map((option) => (
               <option key={option} value={option}>
@@ -248,7 +248,7 @@ export default function ProductsPage() {
         </div>
 
         {allProductsList.length > 0 ? (
-          <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-3 stagger-elite">
+          <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-3 stagger-standard">
             {allProductsList.map((product) => (
               <ProductCard key={product.id} product={product} onAdd={handleAddToCart} />
             ))}

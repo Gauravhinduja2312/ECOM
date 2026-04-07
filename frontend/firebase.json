@@ -3,6 +3,7 @@
     "source": "functions"
   },
   "hosting": {
+    "site": "ecom-52bb3",
     "public": "dist",
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
     "rewrites": [

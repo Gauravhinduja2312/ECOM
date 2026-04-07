@@ -25,7 +25,7 @@ export default function Navbar() {
   };
 
   return (
-    <header className="fixed top-8 left-1/2 -translate-x-1/2 z-50 w-[94%] max-w-6xl animate-elite-reveal">
+    <header className="fixed top-8 left-1/2 -translate-x-1/2 z-50 w-[94%] max-w-6xl animate-standard-reveal">
       <nav className="bg-slate-950/80 backdrop-blur-2xl rounded-3xl px-8 py-4 flex items-center justify-between border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
         {/* Logo */}
         <Link to="/" className="group flex items-center gap-4 transition-all hover:scale-105">
@@ -66,7 +66,7 @@ export default function Navbar() {
                 <Link
                   to="/admin"
                   onMouseEnter={() => Promise.allSettled([preloadAdminDashboardPage(), preloadAddProductPage()])}
-                  className="hidden sm:flex btn-elite px-6 py-2.5 text-[9px] tracking-[0.2em]"
+                  className="hidden sm:flex btn-primary px-6 py-2.5 text-[9px] tracking-[0.2em]"
                 >
                   Admin
                 </Link>
@@ -110,7 +110,7 @@ export default function Navbar() {
             <Link
               to="/login"
               onMouseEnter={preloadAuthPage}
-              className="btn-elite px-6 py-2.5 text-[9px] tracking-[0.2em]"
+              className="btn-primary px-6 py-2.5 text-[9px] tracking-[0.2em]"
             >
               Sign In
             </Link>

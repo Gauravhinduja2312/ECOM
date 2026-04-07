@@ -95,7 +95,7 @@ export default function UserDashboardPage() {
   if (loading) return <Loader text="Loading your dashboard..." />;
 
   return (
-    <div className="bg-[#020617] min-h-screen pt-64 pb-20 stagger-elite">
+    <div className="bg-[#020617] min-h-screen pt-64 pb-20 stagger-standard">
       <div className="mx-auto max-w-6xl px-6">
       {/* Editorial Header */}
       <header className="mb-20 grid lg:grid-cols-12 gap-10 items-end">
@@ -142,7 +142,7 @@ export default function UserDashboardPage() {
         </div>
       </header>
 
-      {/* Primary Bento Workspace */}
+      {/* Dashboard Overview */}
       <div className="grid lg:grid-cols-12 gap-8 mb-20">
         <div className="lg:col-span-3 glass-card p-8 group">
           <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Total Spent</p>
@@ -183,7 +183,7 @@ export default function UserDashboardPage() {
                 <div className="text-6xl mb-8">📦</div>
                 <h3 className="text-2xl font-black text-white uppercase tracking-tighter mb-4">No active orders</h3>
                 <p className="text-slate-500 text-sm mb-10 max-w-xs mx-auto uppercase tracking-widest font-black">Browse the shop to place your first order.</p>
-                <a href="/products" className="btn-elite text-[9px] inline-block px-10">Shop Now</a>
+                <a href="/products" className="btn-primary text-[9px] inline-block px-10">Shop Now</a>
               </div>
             )}
           </div>
@@ -222,9 +222,9 @@ export default function UserDashboardPage() {
               <p className="text-slate-500 font-medium mb-10 leading-relaxed uppercase text-sm tracking-widest">Message our team for any issues or help.</p>
               <button 
                 onClick={() => setShowTicketForm(!showTicketForm)} 
-                className="w-full btn-elite py-5 uppercase text-[10px]"
+                className="w-full btn-primary py-5 uppercase text-[10px]"
               >
-                {showTicketForm ? 'Abort Request' : 'Initialize Request'}
+                {showTicketForm ? 'Cancel' : 'Create Request'}
               </button>
             </div>
             
@@ -234,13 +234,13 @@ export default function UserDashboardPage() {
                   <div className="space-y-8">
                     <div>
                       <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4 block">Request Subject</label>
-                      <input required value={ticketSubject} onChange={e => setTicketSubject(e.target.value)} className="elite-input" placeholder="e.g. Identity verification issue" />
+                      <input required value={ticketSubject} onChange={e => setTicketSubject(e.target.value)} className="standard-input" placeholder="e.g. Question about order" />
                     </div>
                     <div>
                       <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4 block">Problem Details</label>
-                      <textarea required value={ticketDescription} onChange={e => setTicketDescription(e.target.value)} rows="4" className="elite-input" placeholder="Explain the issue..." />
+                      <textarea required value={ticketDescription} onChange={e => setTicketDescription(e.target.value)} rows="4" className="standard-input" placeholder="Explain the issue..." />
                     </div>
-                    <button disabled={submittingTicket} className="btn-elite w-full py-5 text-[10px] tracking-[0.2em]">{submittingTicket ? 'Transmitting...' : 'Send Request'}</button>
+                    <button disabled={submittingTicket} className="btn-primary w-full py-5 text-[10px] tracking-[0.2em]">{submittingTicket ? 'Sending...' : 'Send Request'}</button>
                   </div>
                 </form>
               )}

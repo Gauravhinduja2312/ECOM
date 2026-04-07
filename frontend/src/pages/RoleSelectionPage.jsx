@@ -21,14 +21,14 @@ export default function RoleSelectionPage() {
       <div className="max-w-5xl w-full stagger-children">
         <div className="text-center mb-16">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-indigo-400 text-[10px] font-black uppercase tracking-widest mb-6">
-            Elite Navigation System
+            Marketplace Menu
           </div>
           <h1 className="text-5xl font-black tracking-tight text-white sm:text-7xl mb-6 uppercase">
-            Choose Your <br /><span className="text-gradient-elite">Marketplace Path.</span>
+            Choose Your <br /><span className="text-gradient-primary">Marketplace Path.</span>
           </h1>
           <p className="text-slate-500 font-medium max-w-xl mx-auto text-lg leading-relaxed uppercase tracking-tight">
             Welcome, <span className="font-black text-white italic">{profile?.email?.split('@')[0]}</span>. 
-            Select your specialized workspace to continue your campus commerce journey.
+            Select an area to continue your campus shopping and selling.
           </p>
         </div>
 
@@ -43,10 +43,10 @@ export default function RoleSelectionPage() {
             </div>
             <h2 className="text-3xl font-black text-white mb-4 tracking-tighter uppercase">Shop & Discover</h2>
             <p className="text-slate-400 font-medium mb-12 leading-relaxed">
-              Explore the premium student catalog, manage your acquisitions, and track your loyalty progress.
+              Explore the campus store, see your orders, and track your points.
             </p>
             <div className="mt-auto flex items-center gap-3 text-xs font-black uppercase tracking-widest text-indigo-400 group-hover:gap-5 transition-all">
-              Initialize Buyer Mode <span>→</span>
+              Go to Store <span>→</span>
             </div>
           </button>
 
@@ -60,10 +60,10 @@ export default function RoleSelectionPage() {
             </div>
             <h2 className="text-3xl font-black text-white mb-4 tracking-tighter uppercase">Grow & Earn</h2>
             <p className="text-slate-400 font-medium mb-12 leading-relaxed">
-              Scale your earnings by pitching inventory to the Campus Store and tracking acquisition deals.
+              Earn money by listing items to the Campus Shop and tracking your sales.
             </p>
             <div className="mt-auto flex items-center gap-3 text-xs font-black uppercase tracking-widest text-violet-400 group-hover:gap-5 transition-all">
-              Launch Seller Portal <span>→</span>
+              Sell Items <span>→</span>
             </div>
           </button>
         </div>
@@ -78,19 +78,19 @@ export default function RoleSelectionPage() {
               ⚙️
             </div>
             <div className="flex-1 min-w-[240px]">
-              <h2 className="text-xl font-black text-white tracking-tighter uppercase">Platform Master Terminal</h2>
+              <h2 className="text-xl font-black text-white tracking-tighter uppercase">Admin Dashboard</h2>
               <p className="text-slate-400 text-sm font-medium mt-1">
-                Oversee the complete B2C ecosystem, manage inventory, and analyze platform liquidity.
+                Oversee the marketplace, manage items, and see store stats.
               </p>
             </div>
             <div className="font-black text-emerald-400 text-xs uppercase tracking-[0.25em] group-hover:translate-x-2 transition-transform">
-              Admin Execute <span>→</span>
+              Enter Admin <span>→</span>
             </div>
           </button>
         )}
 
         <footer className="mt-16 text-center text-[10px] font-black text-slate-600 uppercase tracking-[0.3em]">
-          Student Marketplace Elite Commerce Terminal • Safe & Encrypted
+          Campus Marketplace • Safe & Encrypted
         </footer>
       </div>
     </div>

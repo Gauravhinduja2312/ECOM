@@ -160,7 +160,7 @@ export default function AuthPage() {
         <div className="absolute bottom-1/4 right-1/4 h-[500px] w-[500px] rounded-full bg-purple-600/10 blur-[120px] animate-pulse" style={{ animationDelay: '2s' }}></div>
       </div>
 
-      <section className="relative z-10 w-full max-w-xl animate-elite-reveal">
+      <section className="relative z-10 w-full max-w-xl animate-standard-reveal">
         <div className="glass-card p-10 md:p-16">
           {/* Header */}
           <div className="mb-12 text-center">
@@ -174,7 +174,7 @@ export default function AuthPage() {
               {isSignup ? 'Join the campus marketplace' : 'Sign in to your account'}
             </p>
             <div className="mt-8 p-3 rounded-xl bg-white/5 border border-white/5 text-[9px] font-black text-indigo-400 uppercase tracking-widest italic">
-              Restricted Domain: @ves.ac.in credentials only
+              VES College email only (@ves.ac.in)
             </div>
           </div>
 
@@ -187,8 +187,8 @@ export default function AuthPage() {
                   <input
                     type="text"
                     required
-                    className="elite-input"
-                    placeholder="Full Identification"
+                    className="standard-input"
+                    placeholder="Enter your full name"
                     value={fullName}
                     onChange={(event) => setFullName(event.target.value)}
                   />
@@ -197,7 +197,7 @@ export default function AuthPage() {
                   <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Phone Number</label>
                   <input
                     type="tel"
-                    className="elite-input"
+                    className="standard-input"
                     placeholder="Enter 10-digit number"
                     value={phone}
                     onChange={(event) => setPhone(event.target.value)}
@@ -211,8 +211,8 @@ export default function AuthPage() {
               <input
                 type="email"
                 required
-                className="elite-input"
-                placeholder="identifier@ves.ac.in"
+                className="standard-input"
+                placeholder="yourname@ves.ac.in"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
               />
@@ -225,7 +225,7 @@ export default function AuthPage() {
                   type={showPassword ? 'text' : 'password'}
                   required
                   minLength={10}
-                  className="elite-input pr-20"
+                  className="standard-input pr-20"
                   placeholder="At least 10 characters"
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
@@ -242,16 +242,16 @@ export default function AuthPage() {
               {isSignup && (
                 <div className="mt-4 p-5 rounded-2xl bg-white/5 border border-white/5">
                   <div className="flex justify-between items-center mb-4">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Strength Baseline: <span className={`ml-2 ${passwordStrength === 'Strong' ? 'text-emerald-400' : 'text-amber-400'}`}>{passwordStrength}</span></p>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Password Strength: <span className={`ml-2 ${passwordStrength === 'Strong' ? 'text-emerald-400' : 'text-amber-400'}`}>{passwordStrength}</span></p>
                   </div>
                   <div className="grid grid-cols-2 gap-x-6 gap-y-2">
                     {[
                       { key: 'minLength', label: '10+ Chars' },
                       { key: 'lowercase', label: 'Lowercase' },
                       { key: 'uppercase', label: 'Uppercase' },
-                      { key: 'number', label: 'Numerical' },
-                      { key: 'specialChar', label: 'Special' },
-                      { key: 'noSpaces', label: 'No Gaps' },
+                      { key: 'number', label: 'Number' },
+                      { key: 'specialChar', label: 'Symbol' },
+                      { key: 'noSpaces', label: 'No Spaces' },
                     ].map((check) => (
                       <div key={check.key} className="flex items-center gap-2">
                         <div className={`h-1.5 w-1.5 rounded-full ${passwordChecks[check.key] ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-white/10'}`}></div>
@@ -275,8 +275,8 @@ export default function AuthPage() {
                     type={showConfirmPassword ? 'text' : 'password'}
                     required
                     minLength={10}
-                    className="elite-input pr-20"
-                    placeholder="Repeat encryption sequence"
+                    className="standard-input pr-20"
+                    placeholder="Confirm your password"
                     value={confirmPassword}
                     onChange={(event) => setConfirmPassword(event.target.value)}
                   />
@@ -296,7 +296,7 @@ export default function AuthPage() {
             <button
               type="submit"
               disabled={loading}
-              className="btn-elite w-full py-5 text-[10px] tracking-[0.25em]"
+              className="btn-primary w-full py-5 text-[10px] tracking-[0.25em]"
             >
               {loading ? 'Working...' : isSignup ? 'CREATE ACCOUNT' : 'SIGN IN'}
             </button>
@@ -315,7 +315,7 @@ export default function AuthPage() {
         </div>
         
         <p className="mt-8 text-center text-[9px] font-black text-slate-600 uppercase tracking-widest opacity-50">
-          🔐 Encrypted Transmission Protocol v3.04
+          🔐 Secure Campus Marketplace v3.04
         </p>
       </section>
     </div>
