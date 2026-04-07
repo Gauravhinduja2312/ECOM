@@ -188,18 +188,18 @@ export default function SellerPortalPage() {
     <div className="bg-[#020617] min-h-screen pt-64 pb-20 stagger-elite text-white">
       <div className="mx-auto max-w-6xl px-6">
       <header className="mb-20 flex flex-col md:flex-row md:items-end justify-between gap-8">
-        <div>
-          <h1 className="text-4xl font-black tracking-tight text-white uppercase inline-flex items-center gap-4">
-            <span className="h-12 w-12 rounded-2xl bg-indigo-600 flex items-center justify-center text-xl shadow-[0_0_30px_rgba(79,70,229,0.3)]">💼</span>
-            Seller Terminal
-          </h1>
-          <p className="text-slate-500 mt-2 text-[10px] font-black uppercase tracking-[0.25em]">Acquisition Pitch Management</p>
-        </div>
+    <div>
+      <h1 className="text-4xl font-black tracking-tight text-white uppercase inline-flex items-center gap-4">
+        <span className="h-12 w-12 rounded-2xl bg-indigo-600 flex items-center justify-center text-xl shadow-[0_0_30px_rgba(79,70,229,0.3)]">💼</span>
+        Seller Portal
+      </h1>
+      <p className="text-slate-500 mt-2 text-[10px] font-black uppercase tracking-[0.25em]">Manage Your Listings</p>
+    </div>
         <div className="flex gap-3">
           {[
             { id: 'dashboard', label: 'Monitor', icon: '📊' },
-            { id: 'submit', label: 'New Pitch', icon: '➕' },
-            { id: 'settings', label: 'Protocol', icon: '⚙️' },
+            { id: 'submit', label: 'List Item', icon: '➕' },
+            { id: 'settings', label: 'Settings', icon: '⚙️' },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -236,7 +236,7 @@ export default function SellerPortalPage() {
               <p className="mt-2 text-4xl font-black text-white tracking-tighter">{stats.acceptedCount}</p>
             </div>
             <div className="glass-elite p-8 rounded-3xl bg-indigo-600/10">
-              <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Total Earned Value</p>
+              <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Total Earnings</p>
               <p className="mt-2 text-4xl font-black text-white tracking-tighter">{formatCurrency(stats.totalEarnings)}</p>
             </div>
           </div>
@@ -244,7 +244,7 @@ export default function SellerPortalPage() {
           {/* Active Pitches List */}
           <div className="glass-elite rounded-[2.5rem] overflow-hidden">
             <div className="px-8 py-5 border-b border-white/5 bg-white/5 flex justify-between items-center">
-              <h2 className="text-[10px] font-black uppercase tracking-widest text-white">Active Product Pitches</h2>
+              <h2 className="text-[10px] font-black uppercase tracking-widest text-white">Your Product Listings</h2>
               <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">{myPitches.length} Total</span>
             </div>
             <div className="divide-y divide-white/5">
@@ -270,15 +270,15 @@ export default function SellerPortalPage() {
                     </div>
                     <div className="text-right">
                         <p className="text-2xl font-black text-white tracking-tighter">{formatCurrency(pitch.price)}</p>
-                        <p className="text-[10px] font-black text-slate-500 mt-2 uppercase tracking-widest">Base Assessment</p>
+                        <p className="text-[10px] font-black text-slate-500 mt-2 uppercase tracking-widest">Selling Price</p>
                     </div>
                   </div>
 
                   {pitch.price_offer_status === 'pending_student_response' && (
                     <div className="mt-8 p-6 rounded-[1.5rem] bg-indigo-600/10 border border-indigo-500/20 flex flex-col sm:flex-row items-center justify-between gap-6 animate-pulse">
                         <div>
-                            <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-1">Administrative Buyout Offer Received</p>
-                            <p className="text-xl font-black text-white uppercase tracking-tighter">Acquisition Offer: {formatCurrency(pitch.proposed_price)}</p>
+                            <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-1">Buyout Offer Received</p>
+                            <p className="text-xl font-black text-white uppercase tracking-tighter">Offer Price: {formatCurrency(pitch.proposed_price)}</p>
                         </div>
                         <div className="flex gap-3 w-full sm:w-auto">
                             <button onClick={() => handleOfferResponse(pitch.id, 'accept')} className="flex-1 sm:flex-none btn-elite px-6 py-3 text-[10px]">ACCEPT OFFER</button>
@@ -301,20 +301,20 @@ export default function SellerPortalPage() {
                       disabled={pitch.verification_status !== 'pending'}
                       className="text-[10px] font-black text-slate-500 hover:text-indigo-400 disabled:opacity-20 transition uppercase tracking-widest"
                     >
-                      EDIT PITCH
+                      EDIT LISTING
                     </button>
                     <button 
                       onClick={() => handleDelete(pitch.id)}
                       className="text-[10px] font-black text-slate-500 hover:text-rose-500 transition uppercase tracking-widest"
                     >
-                      TERMINATE
+                      DELETE
                     </button>
                   </div>
                 </div>
               )) : (
                 <div className="py-24 text-center">
-                    <p className="text-slate-500 text-sm font-black uppercase tracking-[0.2em] italic">No active pitches detected.</p>
-                    <button onClick={() => setActiveTab('submit')} className="mt-4 text-indigo-400 text-[10px] font-black uppercase tracking-widest hover:text-white transition">Initialize first acquisition pitch →</button>
+                    <p className="text-slate-500 text-sm font-black uppercase tracking-[0.2em] italic">No active listings found.</p>
+                    <button onClick={() => setActiveTab('submit')} className="mt-4 text-indigo-400 text-[10px] font-black uppercase tracking-widest hover:text-white transition">Create your first listing →</button>
                 </div>
               )}
             </div>
@@ -325,37 +325,37 @@ export default function SellerPortalPage() {
       {activeTab === 'submit' && (
         <div className="max-w-2xl mx-auto stagger-elite">
             <div className="glass-elite p-10 rounded-[2.5rem]">
-                <h2 className="text-3xl font-black text-white uppercase tracking-tighter mb-8">{editingId ? 'Modify Pitch Baseline' : 'Register Acquisition Pitch'}</h2>
+                <h2 className="text-3xl font-black text-white uppercase tracking-tighter mb-8">{editingId ? 'Edit Product Details' : 'List New Product'}</h2>
                 <form onSubmit={handleSubmitOffer} className="space-y-6">
                     <div>
-                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Asset Name</label>
-                        <input className="elite-input" value={form.name} onChange={e => onChange('name', e.target.value)} required placeholder="Scientific Identifier..." />
+                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Product Name</label>
+                        <input className="elite-input" value={form.name} onChange={e => onChange('name', e.target.value)} required placeholder="Enter product name..." />
                     </div>
                     <div>
-                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Specifications & Status</label>
-                        <textarea className="elite-input min-h-32" value={form.description} onChange={e => onChange('description', e.target.value)} required placeholder="Document condition, age, and operational status..." />
+                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Description & Condition</label>
+                        <textarea className="elite-input min-h-32" value={form.description} onChange={e => onChange('description', e.target.value)} required placeholder="Briefly describe the item and its condition..." />
                     </div>
                     <div className="grid gap-6 sm:grid-cols-2">
                         <div>
-                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Valuation Baseline (₹)</label>
+                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Price (₹)</label>
                             <input type="number" className="elite-input" value={form.price} onChange={e => onChange('price', e.target.value)} required placeholder="0.00" />
                         </div>
                         <div>
-                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Category Domain</label>
-                            <input className="elite-input" value={form.category} onChange={e => onChange('category', e.target.value)} required placeholder="Institutional Domain..." />
+                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Category</label>
+                            <input className="elite-input" value={form.category} onChange={e => onChange('category', e.target.value)} required placeholder="e.g. Books, Electronics..." />
                         </div>
                     </div>
                     <div>
-                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Visual Evidence</label>
+                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Product Photo</label>
                         <label className="elite-input flex flex-col items-center justify-center py-10 border-dashed border-white/10 hover:border-indigo-500/50 cursor-pointer group transition-all">
                             <input type="file" className="hidden" onChange={handleImageUpload} accept="image/*" />
-                            {uploading ? <p className="text-[10px] font-black text-indigo-400 animate-pulse uppercase tracking-widest">TRANSMITTING...</p> : 
-                             form.image_url ? <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">✓ EVIDENCE ACQUIRED</p> : 
-                             <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest group-hover:text-white transition">Acquire Visual Representation</p>}
+                            {uploading ? <p className="text-[10px] font-black text-indigo-400 animate-pulse uppercase tracking-widest">SAVING...</p> : 
+                             form.image_url ? <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">✓ PHOTO UPLOADED</p> : 
+                             <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest group-hover:text-white transition">Upload Photo</p>}
                         </label>
                     </div>
                     <button type="submit" disabled={saving || uploading} className="btn-elite w-full py-5 text-[10px] tracking-[0.2em]">
-                        {saving ? 'TRANSMITTING...' : editingId ? 'UPDATE BASELINE' : 'EXECUTE PITCH REGISTRATION'}
+                        {saving ? 'SAVING...' : editingId ? 'UPDATE PRODUCT' : 'LIST PRODUCT FOR SALE'}
                     </button>
                     {editingId && <button type="button" onClick={() => { setEditingId(null); setActiveTab('dashboard'); }} className="w-full text-[10px] font-black text-slate-500 hover:text-white transition uppercase tracking-widest pt-4">ABORT UPDATE</button>}
                 </form>
@@ -366,17 +366,17 @@ export default function SellerPortalPage() {
       {activeTab === 'settings' && (
         <div className="max-w-2xl mx-auto stagger-elite">
             <div className="glass-elite p-10 rounded-[2.5rem]">
-                <h2 className="text-3xl font-black text-white uppercase tracking-tighter mb-2">Protocol Settings</h2>
-                <p className="text-slate-500 mb-8 text-[10px] font-black uppercase tracking-widest">Revenue Liquidation Configuration</p>
+                <h2 className="text-3xl font-black text-white uppercase tracking-tighter mb-2">Seller Settings</h2>
+                <p className="text-slate-500 mb-8 text-[10px] font-black uppercase tracking-widest">Payment Configuration</p>
                 
                 <form onSubmit={handleSavePayout} className="space-y-6">
                     <div>
-                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Institutional UPI ID</label>
-                        <input className="elite-input" value={payoutDetails.upi_id} onChange={e => setPayoutDetails({ upi_id: e.target.value })} required placeholder="identifier@node" />
-                        <p className="text-[9px] text-slate-600 mt-3 font-black uppercase tracking-widest italic opacity-60">Verification via micro-transaction protocols may apply.</p>
+                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">UPI ID for Payouts</label>
+                        <input className="elite-input" value={payoutDetails.upi_id} onChange={e => setPayoutDetails({ upi_id: e.target.value })} required placeholder="yourname@upi" />
+                        <p className="text-[9px] text-slate-600 mt-3 font-black uppercase tracking-widest italic opacity-60">We use this to send you money after your items are sold.</p>
                     </div>
                     <button type="submit" disabled={savingPayout} className="btn-elite px-10 py-5 text-[10px] tracking-[0.2em]">
-                        {savingPayout ? 'SYNCHRONIZING...' : 'UPDATE DISBURSEMENT PROTOCOL'}
+                        {savingPayout ? 'SAVING...' : 'SAVE SETTINGS'}
                     </button>
                 </form>
             </div>
