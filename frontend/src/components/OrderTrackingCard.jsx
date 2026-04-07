@@ -14,36 +14,34 @@ const PICKUP_STATUS_LABELS = {
 export default function OrderTrackingCard({ order, isExpandable = true }) {
   const [isExpanded, setIsExpanded] = React.useState(!isExpandable);
 
-  if (!order) {
-    return null;
-  }
+  if (!order) return null;
 
-  const pickupDateTime = order.pickup_time ? new Date(order.pickup_time).toLocaleString() : 'Not scheduled';
+  const pickupDateTime = order.pickup_time ? new Date(order.pickup_time).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }) : 'Not scheduled';
   const pickupStatus = order.logistics?.status || null;
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white/95 shadow-sm hover-lift hover-glow">
+    <div className="group rounded-[2rem] border border-slate-100 bg-white shadow-sm transition-all duration-300 hover:shadow-xl hover:shadow-indigo-500/5">
       {/* Order Header */}
       <div
-        className="cursor-pointer px-6 py-4"
+        className="cursor-pointer p-6 sm:p-8"
         onClick={() => isExpandable && setIsExpanded(!isExpanded)}
       >
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-6">
           <div className="flex-1">
-            <div className="flex items-center gap-3">
-              <h3 className="text-lg font-semibold text-slate-900">Order #{order.id}</h3>
+            <div className="flex items-center gap-4 flex-wrap">
+              <span className="text-xl font-black tracking-tighter text-slate-900 uppercase">Order #{order.id}</span>
               <OrderStatusBadge status={order.status} showIcon={true} />
             </div>
-            <p className="mt-2 text-sm text-slate-600">
-              Placed on {new Date(order.created_at).toLocaleString()}
+            <p className="mt-2 text-xs font-bold text-slate-400 uppercase tracking-widest">
+              Initiated {new Date(order.created_at).toLocaleDateString()}
             </p>
           </div>
           <div className="text-right">
-            <p className="text-2xl font-bold text-indigo-700">{formatCurrency(order.total_price)}</p>
+            <p className="text-3xl font-black text-indigo-600 tracking-tighter">{formatCurrency(order.total_price)}</p>
             {isExpandable && (
-              <p className="text-sm text-slate-500 mt-2">
-                {isExpanded ? '▼ Hide details' : '▶ Show details'}
-              </p>
+              <button className="mt-2 text-[10px] font-black text-indigo-400 uppercase tracking-widest hover:text-indigo-600 transition">
+                {isExpanded ? 'Collapse' : 'View Journey'}
+              </button>
             )}
           </div>
         </div>
@@ -51,62 +49,58 @@ export default function OrderTrackingCard({ order, isExpandable = true }) {
 
       {/* Expandable Content */}
       {isExpanded && (
-        <div className="border-t border-slate-200 px-6 py-4 space-y-6">
+        <div className="px-6 pb-8 sm:px-8 stagger-children">
           {/* Status Timeline */}
-          <div>
-            <h4 className="mb-4 text-sm font-semibold text-slate-700">Order Progress</h4>
+          <div className="rounded-3xl bg-slate-50 border border-slate-100 p-6 mb-6">
+            <h4 className="mb-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Live Logistics Tracking</h4>
             <OrderStatusTimeline currentStatus={order.status} statusUpdatedAt={order.status_updated_at} />
           </div>
 
-          {/* Pickup Details */}
-          <div className="rounded-lg bg-slate-50 p-4">
-            <h4 className="mb-3 text-sm font-semibold text-slate-700">Pickup Information</h4>
-            <div className="space-y-2 text-sm text-slate-600">
-              <div>
-                <span className="font-medium text-slate-700">Location:</span>
-                <p className="mt-1 text-slate-600">{order.pickup_location || 'TBD'}</p>
-              </div>
-              <div>
-                <span className="font-medium text-slate-700">Pickup Time:</span>
-                <p className="mt-1 text-slate-600">{pickupDateTime}</p>
-              </div>
-              <div>
-                <span className="font-medium text-slate-700">Pickup Status:</span>
-                <p className="mt-1 text-slate-600">
-                  {pickupStatus ? PICKUP_STATUS_LABELS[pickupStatus] || pickupStatus : 'Not updated yet'}
-                </p>
+          <div className="grid gap-6 md:grid-cols-2">
+            {/* Pickup Details */}
+            <div className="rounded-3xl border border-slate-100 p-6 hover:bg-slate-50 transition">
+              <h4 className="mb-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Fulfillment Details</h4>
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-8 w-8 rounded-full bg-indigo-50 flex items-center justify-center text-xs">📍</div>
+                  <div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase">Location</p>
+                    <p className="text-sm font-bold text-slate-900">{order.pickup_location || 'Verification Pending'}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="h-8 w-8 rounded-full bg-violet-50 flex items-center justify-center text-xs">⏰</div>
+                  <div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase">Schedule</p>
+                    <p className="text-sm font-bold text-slate-900">{pickupDateTime}</p>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Order Items Summary */}
-          {order.items && order.items.length > 0 && (
-            <div>
-              <h4 className="mb-3 text-sm font-semibold text-slate-700">Items Ordered</h4>
-              <div className="space-y-2">
-                {order.items.map((item) => (
-                  <div key={item.id} className="flex items-center justify-between border-b border-slate-100 pb-2 last:border-b-0">
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-slate-900">{item.product_name}</p>
-                      <p className="text-xs text-slate-500">Qty: {item.quantity}</p>
+            {/* Order Items */}
+            <div className="rounded-3xl border border-slate-100 p-6 hover:bg-slate-50 transition">
+              <h4 className="mb-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Items In Parcel</h4>
+              <div className="space-y-3">
+                {order.items?.map((item) => (
+                  <div key={item.id} className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="h-6 w-6 rounded-md bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-500">{item.quantity}x</div>
+                      <p className="text-xs font-bold text-slate-700">{item.product_name}</p>
                     </div>
-                    <p className="text-sm font-semibold text-slate-900">{formatCurrency(Number(item.price) * Number(item.quantity))}</p>
+                    <p className="text-xs font-black text-slate-900">{formatCurrency(Number(item.price) * Number(item.quantity))}</p>
                   </div>
                 ))}
               </div>
             </div>
-          )}
+          </div>
 
-          {/* Order Actions */}
-          <div className="flex gap-3">
+          <div className="mt-8">
             <button
-              className="flex-1 rounded-lg bg-indigo-600 text-white py-2 px-4 text-sm font-medium hover:bg-indigo-700 transition-colors"
-              onClick={() => {
-                // Navigate to order details
-                window.location.href = `/order/${order.id}`;
-              }}
+              onClick={() => window.location.href = `/order/${order.id}`}
+              className="w-full btn-elite py-4 text-xs tracking-widest uppercase"
             >
-              View Full Details
+              Request Support for this Order
             </button>
           </div>
         </div>

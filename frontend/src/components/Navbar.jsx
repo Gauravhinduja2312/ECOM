@@ -25,121 +25,91 @@ export default function Navbar() {
   };
 
   return (
-    <header className="animate-fade-in sticky top-0 z-30 border-b border-indigo-100 bg-gradient-to-r from-white via-indigo-50/50 to-white backdrop-blur-md shadow-sm">
-      <nav className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:py-4">
+    <header className="fixed top-6 left-1/2 -translate-x-1/2 z-50 w-[95%] max-w-6xl">
+      <nav className="glass-panel rounded-[2rem] border border-white/20 px-6 py-3 flex items-center justify-between shadow-2xl backdrop-blur-2xl">
         {/* Brand */}
-        <Link to="/" className="group inline-flex items-center gap-2 hover-lift">
-          <div className="rounded-xl bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-700 p-1.5 text-white font-black text-sm shadow-lg group-hover:shadow-indigo-300/50 transition">
+        <Link to="/" className="group flex items-center gap-3 transition-transform hover:scale-105 active:scale-95">
+          <div className="h-10 w-10 rounded-2xl bg-indigo-600 flex items-center justify-center text-white font-black text-xs shadow-lg shadow-indigo-500/20 group-hover:rotate-12 transition-all">
             SM
           </div>
-          <span className="hidden text-lg font-black tracking-tight text-slate-900 sm:inline">Student Marketplace</span>
-          <span className="inline text-lg font-black tracking-tighter text-slate-900 sm:hidden">SM</span>
+          <div className="hidden sm:block">
+            <span className="text-sm font-black tracking-tighter text-slate-900 uppercase">Student</span>
+            <span className="block text-[10px] font-black tracking-[0.3em] text-indigo-500 uppercase -mt-1">Marketplace</span>
+          </div>
         </Link>
 
-        {/* Navigation Links */}
-        <div className="flex w-full flex-wrap items-center justify-end gap-1 text-xs font-medium sm:w-auto sm:gap-2 sm:text-sm">
+        {/* Desktop Navigation */}
+        <div className="flex items-center gap-2">
           <Link
             to="/products"
             onMouseEnter={preloadProductsPage}
-            onFocus={preloadProductsPage}
-            onTouchStart={preloadProductsPage}
-            className="inline-flex items-center gap-1 rounded-lg px-2.5 py-2 text-slate-700 transition hover:bg-indigo-100/60 hover:text-indigo-900 hover-lift sm:px-3"
+            className="hidden md:flex items-center gap-2 px-4 py-2 text-xs font-black uppercase tracking-widest text-slate-600 hover:text-indigo-600 transition"
           >
-            <span>🛍️</span>
-            <span className="hidden sm:inline">Products</span>
+            Explore
           </Link>
 
           <Link
             to="/cart"
             onMouseEnter={preloadCartPage}
-            onFocus={preloadCartPage}
-            onTouchStart={preloadCartPage}
-            className="group relative inline-flex items-center gap-1 rounded-lg px-2.5 py-2 text-slate-700 transition hover:bg-indigo-100/60 hover:text-indigo-900 hover-lift sm:px-3"
+            className="group relative flex items-center justify-center h-10 w-10 rounded-xl bg-slate-50 border border-slate-100 hover:bg-indigo-50 hover:border-indigo-100 transition"
           >
-            <span>🛒</span>
-            <span className="hidden sm:inline">Cart</span>
+            <span className="text-lg">🛒</span>
             {items.length > 0 && (
-              <span className="absolute -top-1 -right-1 inline-flex items-center justify-center h-5 w-5 rounded-full bg-gradient-to-br from-red-500 to-red-600 text-white text-xs font-bold shadow-lg">
-                {items.length > 99 ? '99+' : items.length}
+              <span className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-indigo-600 text-white text-[10px] font-black flex items-center justify-center shadow-lg animate-pulse">
+                {items.length}
               </span>
             )}
           </Link>
 
-          {profile?.role === 'admin' ? (
-            <Link
-              to="/admin"
-              onMouseEnter={() => Promise.allSettled([preloadAdminDashboardPage(), preloadAddProductPage()])}
-              onFocus={() => Promise.allSettled([preloadAdminDashboardPage(), preloadAddProductPage()])}
-              onTouchStart={() => Promise.allSettled([preloadAdminDashboardPage(), preloadAddProductPage()])}
-              className="inline-flex items-center gap-1 rounded-lg px-2.5 py-2 text-slate-700 transition hover:bg-amber-100/60 hover:text-amber-900 hover-lift sm:px-3"
-            >
-              <span>⚙️</span>
-              <span className="hidden sm:inline">Admin</span>
-            </Link>
-          ) : profile ? (
-            <>
-              <Link
-                to="/select-role"
-                className="inline-flex items-center gap-1 rounded-lg px-2.5 py-2 text-slate-700 transition hover:bg-slate-100 hover:text-slate-900 hover-lift sm:px-3"
+          {profile ? (
+            <div className="flex items-center gap-2 ml-2 pl-4 border-l border-slate-100">
+              {profile.role === 'admin' ? (
+                <Link
+                  to="/admin"
+                  onMouseEnter={() => Promise.allSettled([preloadAdminDashboardPage(), preloadAddProductPage()])}
+                  className="hidden sm:flex btn-elite px-4 py-2 text-[10px]"
+                >
+                  Workspace
+                </Link>
+              ) : (
+                <>
+                  <Link
+                    to="/select-role"
+                    className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-50 border border-slate-100 hover:bg-slate-200 transition"
+                    title="Switch Mode"
+                  >
+                    <span>🔄</span>
+                  </Link>
+                  <Link
+                    to="/dashboard"
+                    onMouseEnter={preloadUserDashboardPage}
+                    className="group flex items-center gap-3 pl-2 pr-1 py-1 rounded-2xl bg-slate-50 border border-slate-100 hover:border-indigo-200 transition"
+                  >
+                    <div className="hidden lg:block text-right">
+                      <p className="text-[9px] font-black text-slate-400 tracking-widest uppercase">Member</p>
+                      <p className="text-[11px] font-bold text-slate-900 -mt-0.5">{profile.email?.split('@')[0]}</p>
+                    </div>
+                    <div className="h-8 w-8 rounded-xl bg-white border border-slate-200 shadow-sm flex items-center justify-center text-sm group-hover:scale-110 transition">
+                      {profile.loyalty_tier === 'gold' ? '💎' : profile.loyalty_tier === 'silver' ? '🥈' : '👤'}
+                    </div>
+                  </Link>
+                </>
+              )}
+              <button
+                onClick={handleLogout}
+                className="h-10 w-10 rounded-xl flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 transition"
               >
-                <span>🔄</span>
-                <span className="hidden sm:inline">Switch</span>
-              </Link>
-              <Link
-                to="/seller/dashboard"
-                onMouseEnter={preloadSellerPortalPage}
-                onFocus={preloadSellerPortalPage}
-                onTouchStart={preloadSellerPortalPage}
-                className="inline-flex items-center gap-1 rounded-lg px-2.5 py-2 text-slate-700 transition hover:bg-violet-100/60 hover:text-violet-900 hover-lift sm:px-3"
-              >
-                <span>📤</span>
-                <span className="hidden sm:inline">Seller Portal</span>
-              </Link>
-              <Link
-                to="/dashboard"
-                onMouseEnter={preloadUserDashboardPage}
-                onFocus={preloadUserDashboardPage}
-                onTouchStart={preloadUserDashboardPage}
-                className="inline-flex items-center gap-1 rounded-lg px-2.5 py-2 text-slate-700 transition hover:bg-green-100/60 hover:text-green-900 hover-lift sm:px-3"
-              >
-                <span>👤</span>
-                <span className="hidden sm:inline">Buyer Dash</span>
-              </Link>
-            </>
-          ) : null}
-
-          {profile?.loyalty_tier && (
-            <span className={`hidden sm:inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-bold uppercase tracking-wider shadow-sm transition hover-lift ${
-              profile.loyalty_tier === 'gold' ? 'bg-amber-100 text-amber-700 border border-amber-300 shadow-[0_0_10px_rgba(251,191,36,0.3)]' :
-              profile.loyalty_tier === 'silver' ? 'bg-slate-200 text-slate-700 border border-slate-300' :
-              'bg-orange-50 text-orange-800 border border-orange-200'
-            }`}>
-              {profile.loyalty_tier === 'gold' ? '🏆 ' : profile.loyalty_tier === 'silver' ? '🥈 ' : '🥉 '}
-              {profile.loyalty_tier}
-            </span>
-          )}
-
-          {/* Auth Button */}
-          {!profile ? (
+                <span>↪</span>
+              </button>
+            </div>
+          ) : (
             <Link
               to="/login"
               onMouseEnter={preloadAuthPage}
-              onFocus={preloadAuthPage}
-              onTouchStart={preloadAuthPage}
-              className="btn-gradient px-3 py-2 sm:px-4"
+              className="btn-elite px-6 py-2.5 text-[10px]"
             >
-              <span>🔐</span>
-              <span className="hidden sm:inline">Login</span>
+              Initialize Identity
             </Link>
-          ) : (
-            <button
-              type="button"
-              className="btn-gradient-secondary px-3 py-2 sm:px-4"
-              onClick={handleLogout}
-            >
-              <span>↪</span>
-              <span className="hidden sm:inline">Logout</span>
-            </button>
           )}
         </div>
       </nav>
