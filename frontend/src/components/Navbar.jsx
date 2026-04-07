@@ -7,7 +7,7 @@ import {
   preloadAuthPage,
   preloadCartPage,
   preloadProductsPage,
-  preloadSellProductPage,
+  preloadSellerPortalPage,
   preloadUserDashboardPage,
 } from '../utils/preloadRoutes';
 
@@ -87,9 +87,9 @@ export default function Navbar() {
               </Link>
               <Link
                 to="/seller/dashboard"
-                onMouseEnter={preloadSellProductPage}
-                onFocus={preloadSellProductPage}
-                onTouchStart={preloadSellProductPage}
+                onMouseEnter={preloadSellerPortalPage}
+                onFocus={preloadSellerPortalPage}
+                onTouchStart={preloadSellerPortalPage}
                 className="inline-flex items-center gap-1 rounded-lg px-2.5 py-2 text-slate-700 transition hover:bg-violet-100/60 hover:text-violet-900 hover-lift sm:px-3"
               >
                 <span>📤</span>

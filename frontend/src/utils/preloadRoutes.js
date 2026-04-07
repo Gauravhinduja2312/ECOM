@@ -8,7 +8,7 @@ export const preloadOrderSuccessPage = () => import('../pages/OrderSuccessPage')
 export const preloadUserDashboardPage = () => import('../pages/UserDashboardPage');
 export const preloadAdminDashboardPage = () => import('../pages/AdminDashboardPage');
 export const preloadAddProductPage = () => import('../pages/AddProductPage');
-export const preloadSellProductPage = () => import('../pages/SellProductPage');
+export const preloadSellerPortalPage = () => import('../pages/SellerPortalPage');
 export const preloadSellerPickupDashboard = () => import('../pages/SellerPickupDashboard');
 export const preloadNotFoundPage = () => import('../pages/NotFoundPage');
 
@@ -17,6 +17,6 @@ export function warmLikelyRoutes() {
     preloadProductsPage(),
     preloadCartPage(),
     preloadAuthPage(),
-    preloadSellProductPage(),
+    preloadSellerPortalPage(),
   ]);
 }

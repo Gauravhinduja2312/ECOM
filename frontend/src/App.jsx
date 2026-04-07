@@ -13,7 +13,7 @@ import {
   preloadOrderSuccessPage,
   preloadProductDetailPage,
   preloadProductsPage,
-  preloadSellProductPage,
+  preloadSellerPortalPage,
   preloadUserDashboardPage,
   warmLikelyRoutes,
 } from './utils/preloadRoutes';
@@ -27,9 +27,8 @@ const CheckoutPage = lazy(preloadCheckoutPage);
 const OrderSuccessPage = lazy(preloadOrderSuccessPage);
 const UserDashboardPage = lazy(preloadUserDashboardPage);
 const AdminDashboardPage = lazy(preloadAdminDashboardPage);
-const SellProductPage = lazy(preloadSellProductPage);
 const RoleSelectionPage = lazy(() => import('./pages/RoleSelectionPage'));
-const SellerPortalPage = lazy(() => import('./pages/SellProductPage')); // Reusing SellProductPage as transition
+const SellerPortalPage = lazy(preloadSellerPortalPage);
 const NotFoundPage = lazy(preloadNotFoundPage);
 
 function RouteLoader() {
