@@ -128,7 +128,7 @@ export default function AdminDashboardPage() {
         price: item.price,
       }));
       await generateAndDownloadInvoice(order, items);
-      addToast('Invoice generated and sent.', 'success');
+      addToast('Invoice generated and transmitted.', 'success');
     } catch (error) {
       addToast('Failed to generate invoice.', 'error');
     } finally {
@@ -222,15 +222,15 @@ export default function AdminDashboardPage() {
       <div className="mx-auto max-w-7xl px-6 space-y-12">
         {/* Header Section */}
         <header className="flex flex-col md:flex-row justify-between items-end gap-8">
-          <div className="stagger-standard">
+          <div className="stagger-elite">
             <h1 className="text-5xl font-black tracking-tight uppercase inline-flex items-center gap-5">
               <span className="h-16 w-16 rounded-3xl bg-indigo-600 flex items-center justify-center text-2xl shadow-[0_0_40px_rgba(79,70,229,0.3)]">⚡</span>
               Admin Dashboard
             </h1>
-            <p className="mt-4 text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">Admin Control</p>
+            <p className="mt-4 text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">Campus Management Center</p>
           </div>
           
-          <div className="flex gap-2 glass-primary p-1 rounded-2xl">
+          <div className="flex gap-2 glass-elite p-1 rounded-2xl">
             {[
               { id: 'products', label: 'Assets', icon: '📦' },
               { id: 'orders', label: 'Orders', icon: '🛒' },
@@ -255,12 +255,12 @@ export default function AdminDashboardPage() {
 
         {/* Global Analytics Overview */}
         {analytics && (
-          <div className="grid gap-6 md:grid-cols-4 stagger-standard">
+          <div className="grid gap-6 md:grid-cols-4 stagger-elite">
             {[
-              { label: 'Total Sales', value: formatCurrency(analytics.totalRevenue), color: 'text-white' },
-              { label: 'Our Profit', value: formatCurrency((analytics.totalRevenue || 0) - (analytics.totalSellerPayout || 0)), color: 'text-indigo-400' },
-              { label: 'Seller Payments', value: formatCurrency(analytics.totalSellerPayout || 0), color: 'text-emerald-400' },
-              { label: 'Total Users', value: users.length, color: 'text-amber-400' },
+              { label: 'Gross Revenue', value: formatCurrency(analytics.totalRevenue), color: 'text-white' },
+              { label: 'Platform Profit', value: formatCurrency((analytics.totalRevenue || 0) - (analytics.totalSellerPayout || 0)), color: 'text-indigo-400' },
+              { label: 'Total Payouts', value: formatCurrency(analytics.totalSellerPayout || 0), color: 'text-emerald-400' },
+              { label: 'Active Users', value: users.length, color: 'text-amber-400' },
             ].map((stat, i) => (
               <div key={i} className="glass-card p-8 group">
                 <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-3">{stat.label}</p>
@@ -271,7 +271,7 @@ export default function AdminDashboardPage() {
         )}
 
         {/* Dynamic Content Domain */}
-        <main className="glass-primary rounded-[2.5rem] overflow-hidden min-h-[600px] flex flex-col">
+        <main className="glass-elite rounded-[2.5rem] overflow-hidden min-h-[600px] flex flex-col">
           {/* Internal Tab Navigation (Contextual) */}
           {activeTab === 'products' && (
             <div className="px-10 h-20 border-b border-white/5 flex items-center gap-10 bg-white/5">
@@ -345,24 +345,24 @@ export default function AdminDashboardPage() {
                                 <div className="flex gap-3">
                                   <input 
                                     type="number" 
-                                    className="input-field w-32 py-3" 
+                                    className="elite-input w-32 py-3" 
                                     placeholder="Retail ₹"
                                     value={acquireDrafts[sub.id] ?? sub.proposed_price ?? ''}
                                     onChange={(e) => setAcquireDrafts({...acquireDrafts, [sub.id]: e.target.value})}
                                   />
-                                  <button onClick={() => handleAcquire(sub.id, sub.proposed_price)} className="btn-primary px-6 py-3 text-[10px]">ADD TO STORE</button>
+                                  <button onClick={() => handleAcquire(sub.id, sub.proposed_price)} className="btn-elite px-6 py-3 text-[10px]">ADD TO STORE</button>
                                 </div>
                               ) : (
                                 <div className="flex flex-col gap-3">
                                   <div className="flex gap-3">
                                     <input 
                                       type="number" 
-                                      className="input-field w-32 py-3" 
+                                      className="elite-input w-32 py-3" 
                                       placeholder="Offer ₹"
                                       value={draft.proposedPrice}
                                       onChange={(e) => setReviewDrafts({...reviewDrafts, [sub.id]: {...draft, proposedPrice: e.target.value}})}
                                     />
-                                    <button onClick={() => handleReview(sub.id, 'counter')} className="btn-primary px-6 py-3 text-[10px]">SEND OFFER</button>
+                                    <button onClick={() => handleReview(sub.id, 'counter')} className="btn-elite px-6 py-3 text-[10px]">SEND OFFER</button>
                                   </div>
                                   <button onClick={() => handleReview(sub.id, 'reject')} className="text-[9px] font-black text-slate-600 hover:text-rose-500 uppercase tracking-widest transition">Reject Item</button>
                                 </div>
@@ -400,14 +400,14 @@ export default function AdminDashboardPage() {
                       </div>
                       
                       <div className="flex flex-col gap-2">
-                        {order.status === 'order_placed' && <button onClick={() => handleUpdateOrderStatus(order.id, 'processing')} className="btn-primary px-6 py-3 text-[10px]">START PROCESSING</button>}
+                        {order.status === 'order_placed' && <button onClick={() => handleUpdateOrderStatus(order.id, 'processing')} className="btn-elite px-6 py-3 text-[10px]">START PROCESSING</button>}
                         {order.status === 'processing' && (
                           <>
-                            <button onClick={() => handleUpdateOrderStatus(order.id, 'ready_for_pickup')} className="btn-primary px-6 py-3 text-[10px] bg-amber-600 shadow-[0_0_20px_rgba(217,119,6,0.3)] border-amber-500/20">READY FOR PICKUP</button>
-                            <button onClick={() => handleUpdateOrderStatus(order.id, 'shipped')} className="btn-primary px-6 py-3 text-[10px]">SEND SHIPMENT</button>
+                            <button onClick={() => handleUpdateOrderStatus(order.id, 'ready_for_pickup')} className="btn-elite px-6 py-3 text-[10px] bg-amber-600 shadow-[0_0_20px_rgba(217,119,6,0.3)] border-amber-500/20">READY FOR PICKUP</button>
+                            <button onClick={() => handleUpdateOrderStatus(order.id, 'shipped')} className="btn-elite px-6 py-3 text-[10px]">SEND SHIPMENT</button>
                           </>
                         )}
-                        {(order.status === 'shipped' || order.status === 'ready_for_pickup') && <button onClick={() => handleUpdateOrderStatus(order.id, 'completed')} className="btn-primary px-6 py-3 text-[10px] bg-emerald-600 shadow-[0_0_20px_rgba(16,185,129,0.3)] border-emerald-500/20">MARK COMPLETE</button>}
+                        {(order.status === 'shipped' || order.status === 'ready_for_pickup') && <button onClick={() => handleUpdateOrderStatus(order.id, 'completed')} className="btn-elite px-6 py-3 text-[10px] bg-emerald-600 shadow-[0_0_20px_rgba(16,185,129,0.3)] border-emerald-500/20">MARK COMPLETE</button>}
                         <button onClick={() => handleDownloadInvoice(order)} className="px-6 py-3 bg-white/5 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-white transition">INVOICE</button>
                       </div>
                     </div>
@@ -432,7 +432,7 @@ export default function AdminDashboardPage() {
                       </div>
                       <div className="flex gap-4">
                         <div className="px-6 py-4 rounded-2xl bg-white/5 border border-white/5 text-right">
-                          <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1">To be Paid</p>
+                          <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1">Pending Liquidation</p>
                           <p className="text-sm font-black text-amber-400">{formatCurrency(payout.total_unpaid || 0)}</p>
                         </div>
                         <div className="px-6 py-4 rounded-2xl bg-white/5 border border-white/5 text-right">
@@ -444,7 +444,7 @@ export default function AdminDashboardPage() {
 
                     <div className="flex items-center gap-4 pt-10 border-t border-white/5">
                       <input 
-                        className="input-field flex-1" 
+                        className="elite-input flex-1" 
                         placeholder="Transaction Token (UTR/ID)..." 
                         value={payoutReferenceDrafts[payout.seller_id]}
                         onChange={(e) => setPayoutReferenceDrafts({...payoutReferenceDrafts, [payout.seller_id]: e.target.value})}
@@ -452,7 +452,7 @@ export default function AdminDashboardPage() {
                       <button 
                         onClick={() => handleMarkSellerPaid(payout.seller_id, payout.items.filter(i => i.payout_status !== 'paid').map(i => i.order_item_id))}
                         disabled={!payout.total_unpaid}
-                        className="btn-primary px-10 py-5 text-[10px] disabled:opacity-20"
+                        className="btn-elite px-10 py-5 text-[10px] disabled:opacity-20"
                       >
                         MARK AS PAID
                       </button>
@@ -469,7 +469,7 @@ export default function AdminDashboardPage() {
                     data={{
                       labels: analytics ? Object.keys(analytics.dailySales) : [],
                       datasets: [{
-                        label: 'Sales Trend (₹)',
+                        label: 'Sales Velocity (INR)',
                         data: analytics ? Object.values(analytics.dailySales) : [],
                         borderColor: '#6366f1',
                         backgroundColor: 'rgba(99, 102, 241, 0.1)',

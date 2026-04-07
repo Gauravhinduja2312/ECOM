@@ -14,15 +14,15 @@ export default function LandingPage() {
       </div>
 
 
-      <main className="primary-container pt-80 pb-20 relative z-10">
-        <section className="text-center stagger-standard">
+      <main className="elite-container pt-80 pb-20 relative z-10">
+        <section className="text-center stagger-elite">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-[0.25em] text-indigo-400 mb-8">
             The Best Campus Marketplace
           </div>
           
           <h1 className="text-6xl md:text-8xl font-black tracking-tight leading-[0.9] mb-10">
-            <span className="text-gradient-primary">THE HUB FOR</span> <br />
-            <span className="text-accent-primary">CAMPUS SHOPPING.</span>
+            <span className="text-gradient-elite">THE HUB FOR</span> <br />
+            <span className="text-accent-elite">CAMPUS SHOPPING.</span>
           </h1>
 
           <p className="max-w-2xl mx-auto text-lg md:text-xl text-slate-400 font-medium leading-relaxed mb-16">
@@ -31,7 +31,7 @@ export default function LandingPage() {
           </p>
 
           <div className="flex flex-wrap items-center justify-center gap-6">
-            <Link to="/products" className="btn-primary py-5 px-12 group">
+            <Link to="/products" className="btn-elite py-5 px-12 group">
               Start Shopping 
               <span className="ml-3 transition-transform group-hover:translate-x-2">→</span>
             </Link>
@@ -42,7 +42,7 @@ export default function LandingPage() {
         </section>
 
         {/* Hero Bento Feature Section */}
-        <section className="mt-40 grid gap-8 lg:grid-cols-12 stagger-standard">
+        <section className="mt-40 grid gap-8 lg:grid-cols-12 stagger-elite">
           <div className="lg:col-span-8 glass-card p-12">
             <div className="mb-8 h-12 w-12 rounded-2xl bg-indigo-500/20 flex items-center justify-center text-2xl">🏛️</div>
             <h3 className="text-4xl font-black text-white mb-6 tracking-tighter uppercase">Trusted Campus Hub</h3>
@@ -61,14 +61,14 @@ export default function LandingPage() {
             <h3 className="text-2xl font-black text-white mb-4 tracking-tighter uppercase">Safe & Secure</h3>
             <p className="text-slate-400 text-sm font-medium">Every deal is protected and payments are handled securely by the platform.</p>
           </div>
-          <div className="lg:col-span-8 glass-primary p-12 flex items-center justify-between">
+          <div className="lg:col-span-8 glass-elite p-12 flex items-center justify-between">
             <div className="flex-1">
               <h3 className="text-4xl font-black text-white mb-2 tracking-tighter uppercase">Fast & Easy</h3>
               <p className="text-slate-400 text-sm font-medium">Buying and selling items has never been quicker.</p>
             </div>
             <div className="hidden sm:flex gap-4">
               {[1, 2, 3].map(i => (
-                <div key={i} className="h-16 w-16 rounded-2xl bg-white/5 border border-white/5 flex items-center justify-center text-xl animate-float-standard" style={{ animationDelay: `${i * 1.5}s` }}>
+                <div key={i} className="h-16 w-16 rounded-2xl bg-white/5 border border-white/5 flex items-center justify-center text-xl animate-float-elite" style={{ animationDelay: `${i * 1.5}s` }}>
                   🚀
                 </div>
               ))}

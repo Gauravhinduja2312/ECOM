@@ -82,7 +82,7 @@ export default function SellerPortalPage() {
     try {
       const url = await uploadProductImage(file);
       onChange('image_url', url);
-      addToast('Photo uploaded.', 'info');
+      addToast('Visual evidence acquired.', 'info');
     } catch (err) {
       setErrorMessage('Upload failed.');
     } finally {
@@ -111,12 +111,12 @@ export default function SellerPortalPage() {
           .eq('id', editingId)
           .eq('seller_id', profile.id);
         if (error) throw error;
-        addToast('Item details updated. ✨', 'success');
+        addToast('Acquisition pitch baseline updated. ✨', 'success');
       } else {
         await apiRequest('/api/products/store/offer', 'POST', session.access_token, {
           listingDraft: payload,
         });
-        addToast('Item listed to Campus Shop. 🎉', 'success');
+        addToast('Product pitched to Campus Store. 🎉', 'success');
       }
 
       setForm(initialForm);
@@ -133,7 +133,7 @@ export default function SellerPortalPage() {
   const handleOfferResponse = async (id, decision) => {
     try {
       await apiRequest(`/api/products/${id}/offer-response`, 'POST', session.access_token, { decision });
-      addToast(decision === 'accept' ? 'Offer accepted. We will contact you for pickup.' : 'Offer rejected.', 'success');
+      addToast(decision === 'accept' ? 'Offer accepted. Pickup protocol initialized.' : 'Offer rejected.', 'success');
       fetchData();
     } catch (err) {
       setErrorMessage('Failed to respond to offer.');
@@ -158,7 +158,7 @@ export default function SellerPortalPage() {
     try {
       const { error } = await supabase.from('products').delete().eq('id', id).eq('seller_id', profile.id);
       if (error) throw error;
-      addToast('Listing removed.', 'info');
+      addToast('Pitch terminated.', 'info');
       fetchData();
     } catch (err) {
       setErrorMessage('Failed to delete pitch.');
@@ -174,7 +174,7 @@ export default function SellerPortalPage() {
         .update({ upi_id: payoutDetails.upi_id.trim() })
         .eq('id', profile.id);
       if (error) throw error;
-      addToast('Payment info updated.', 'success');
+      addToast('Payment settings adjusted.', 'success');
     } catch (err) {
       setErrorMessage('Failed to save settings.');
     } finally {
@@ -185,21 +185,21 @@ export default function SellerPortalPage() {
   if (loading) return <Loader text="Entering Seller Portal..." />;
 
   return (
-    <div className="bg-[#020617] min-h-screen pt-64 pb-20 stagger-standard text-white">
+    <div className="bg-[#020617] min-h-screen pt-64 pb-20 stagger-elite text-white">
       <div className="mx-auto max-w-6xl px-6">
       <header className="mb-20 flex flex-col md:flex-row md:items-end justify-between gap-8">
         <div>
           <h1 className="text-4xl font-black tracking-tight text-white uppercase inline-flex items-center gap-4">
             <span className="h-12 w-12 rounded-2xl bg-indigo-600 flex items-center justify-center text-xl shadow-[0_0_30px_rgba(79,70,229,0.3)]">💼</span>
-            Seller Dashboard
+            Seller Terminal
           </h1>
-          <p className="text-slate-500 mt-2 text-[10px] font-black uppercase tracking-[0.25em]">Manage your items and sales</p>
+          <p className="text-slate-500 mt-2 text-[10px] font-black uppercase tracking-[0.25em]">Acquisition Pitch Management</p>
         </div>
         <div className="flex gap-3">
           {[
-            { id: 'dashboard', label: 'Stats', icon: '📊' },
-            { id: 'submit', label: 'Sell Item', icon: '➕' },
-            { id: 'settings', label: 'Settings', icon: '⚙️' },
+            { id: 'dashboard', label: 'Monitor', icon: '📊' },
+            { id: 'submit', label: 'New Pitch', icon: '➕' },
+            { id: 'settings', label: 'Protocol', icon: '⚙️' },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -227,24 +227,24 @@ export default function SellerPortalPage() {
       {activeTab === 'dashboard' && (
         <div className="space-y-8 stagger-children">
           <div className="grid gap-6 sm:grid-cols-3">
-            <div className="glass-primary p-8 rounded-3xl">
-              <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Pending</p>
+            <div className="glass-elite p-8 rounded-3xl">
+              <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Awaiting Review</p>
               <p className="mt-2 text-4xl font-black text-white tracking-tighter">{stats.pendingCount}</p>
             </div>
-            <div className="glass-primary p-8 rounded-3xl">
-              <p className="text-[10px] font-black text-violet-400 uppercase tracking-widest">Sold Items</p>
+            <div className="glass-elite p-8 rounded-3xl">
+              <p className="text-[10px] font-black text-violet-400 uppercase tracking-widest">Accepted Deals</p>
               <p className="mt-2 text-4xl font-black text-white tracking-tighter">{stats.acceptedCount}</p>
             </div>
-            <div className="glass-primary p-8 rounded-3xl bg-indigo-600/10">
-              <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Total Earnings</p>
+            <div className="glass-elite p-8 rounded-3xl bg-indigo-600/10">
+              <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Total Earned Value</p>
               <p className="mt-2 text-4xl font-black text-white tracking-tighter">{formatCurrency(stats.totalEarnings)}</p>
             </div>
           </div>
 
           {/* Active Pitches List */}
-          <div className="glass-primary rounded-[2.5rem] overflow-hidden">
+          <div className="glass-elite rounded-[2.5rem] overflow-hidden">
             <div className="px-8 py-5 border-b border-white/5 bg-white/5 flex justify-between items-center">
-              <h2 className="text-[10px] font-black uppercase tracking-widest text-white">Your Listed Items</h2>
+              <h2 className="text-[10px] font-black uppercase tracking-widest text-white">Active Product Pitches</h2>
               <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">{myPitches.length} Total</span>
             </div>
             <div className="divide-y divide-white/5">
@@ -270,18 +270,18 @@ export default function SellerPortalPage() {
                     </div>
                     <div className="text-right">
                         <p className="text-2xl font-black text-white tracking-tighter">{formatCurrency(pitch.price)}</p>
-                        <p className="text-[10px] font-black text-slate-500 mt-2 uppercase tracking-widest">Your Price</p>
+                        <p className="text-[10px] font-black text-slate-500 mt-2 uppercase tracking-widest">Base Assessment</p>
                     </div>
                   </div>
 
                   {pitch.price_offer_status === 'pending_student_response' && (
                     <div className="mt-8 p-6 rounded-[1.5rem] bg-indigo-600/10 border border-indigo-500/20 flex flex-col sm:flex-row items-center justify-between gap-6 animate-pulse">
                         <div>
-                            <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-1">Our Buyout Offer</p>
-                            <p className="text-xl font-black text-white uppercase tracking-tighter">Store Offer: {formatCurrency(pitch.proposed_price)}</p>
+                            <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-1">Administrative Buyout Offer Received</p>
+                            <p className="text-xl font-black text-white uppercase tracking-tighter">Acquisition Offer: {formatCurrency(pitch.proposed_price)}</p>
                         </div>
                         <div className="flex gap-3 w-full sm:w-auto">
-                            <button onClick={() => handleOfferResponse(pitch.id, 'accept')} className="flex-1 sm:flex-none btn-primary px-6 py-3 text-[10px]">ACCEPT OFFER</button>
+                            <button onClick={() => handleOfferResponse(pitch.id, 'accept')} className="flex-1 sm:flex-none btn-elite px-6 py-3 text-[10px]">ACCEPT OFFER</button>
                             <button onClick={() => handleOfferResponse(pitch.id, 'reject')} className="flex-1 sm:flex-none px-6 py-3 bg-white/5 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-white transition">DECLINE</button>
                         </div>
                     </div>
@@ -290,7 +290,7 @@ export default function SellerPortalPage() {
                   {pitch.price_offer_status === 'accepted' && (
                     <div className="mt-4 flex items-center gap-3 p-4 rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                         <span className="text-lg">✓</span>
-                        <p className="text-[10px] font-black uppercase tracking-widest">Sold to Campus Shop for {formatCurrency(pitch.price)}</p>
+                        <p className="text-[10px] font-black uppercase tracking-widest">Marketplace Acquisition finalized for {formatCurrency(pitch.price)}</p>
                     </div>
                   )}
 
@@ -301,7 +301,7 @@ export default function SellerPortalPage() {
                       disabled={pitch.verification_status !== 'pending'}
                       className="text-[10px] font-black text-slate-500 hover:text-indigo-400 disabled:opacity-20 transition uppercase tracking-widest"
                     >
-                      EDIT ITEM
+                      EDIT PITCH
                     </button>
                     <button 
                       onClick={() => handleDelete(pitch.id)}
@@ -314,7 +314,7 @@ export default function SellerPortalPage() {
               )) : (
                 <div className="py-24 text-center">
                     <p className="text-slate-500 text-sm font-black uppercase tracking-[0.2em] italic">No active pitches detected.</p>
-                    <button onClick={() => setActiveTab('submit')} className="mt-4 text-indigo-400 text-[10px] font-black uppercase tracking-widest hover:text-white transition">List your first item →</button>
+                    <button onClick={() => setActiveTab('submit')} className="mt-4 text-indigo-400 text-[10px] font-black uppercase tracking-widest hover:text-white transition">Initialize first acquisition pitch →</button>
                 </div>
               )}
             </div>
@@ -323,60 +323,60 @@ export default function SellerPortalPage() {
       )}
 
       {activeTab === 'submit' && (
-        <div className="max-w-2xl mx-auto stagger-standard">
-            <div className="glass-primary p-10 rounded-[2.5rem]">
-                <h2 className="text-3xl font-black text-white uppercase tracking-tighter mb-8">{editingId ? 'Edit Item Details' : 'List New Item'}</h2>
+        <div className="max-w-2xl mx-auto stagger-elite">
+            <div className="glass-elite p-10 rounded-[2.5rem]">
+                <h2 className="text-3xl font-black text-white uppercase tracking-tighter mb-8">{editingId ? 'Modify Pitch Baseline' : 'Register Acquisition Pitch'}</h2>
                 <form onSubmit={handleSubmitOffer} className="space-y-6">
                     <div>
-                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Item Name</label>
-                        <input className="standard-input" value={form.name} onChange={e => onChange('name', e.target.value)} required placeholder="e.g. Psychology Textbook..." />
+                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Asset Name</label>
+                        <input className="elite-input" value={form.name} onChange={e => onChange('name', e.target.value)} required placeholder="Scientific Identifier..." />
                     </div>
                     <div>
-                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Description & Condition</label>
-                        <textarea className="standard-input min-h-32" value={form.description} onChange={e => onChange('description', e.target.value)} required placeholder="Explain what you are selling and its condition..." />
+                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Specifications & Status</label>
+                        <textarea className="elite-input min-h-32" value={form.description} onChange={e => onChange('description', e.target.value)} required placeholder="Document condition, age, and operational status..." />
                     </div>
                     <div className="grid gap-6 sm:grid-cols-2">
                         <div>
-                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Asking Price (₹)</label>
-                            <input type="number" className="standard-input" value={form.price} onChange={e => onChange('price', e.target.value)} required placeholder="0.00" />
+                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Valuation Baseline (₹)</label>
+                            <input type="number" className="elite-input" value={form.price} onChange={e => onChange('price', e.target.value)} required placeholder="0.00" />
                         </div>
                         <div>
-                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Category</label>
-                            <input className="standard-input" value={form.category} onChange={e => onChange('category', e.target.value)} required placeholder="e.g. Books, Electronics..." />
+                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Category Domain</label>
+                            <input className="elite-input" value={form.category} onChange={e => onChange('category', e.target.value)} required placeholder="Institutional Domain..." />
                         </div>
                     </div>
                     <div>
-                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Item Photo</label>
-                        <label className="standard-input flex flex-col items-center justify-center py-10 border-dashed border-white/10 hover:border-indigo-500/50 cursor-pointer group transition-all">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Visual Evidence</label>
+                        <label className="elite-input flex flex-col items-center justify-center py-10 border-dashed border-white/10 hover:border-indigo-500/50 cursor-pointer group transition-all">
                             <input type="file" className="hidden" onChange={handleImageUpload} accept="image/*" />
-                            {uploading ? <p className="text-[10px] font-black text-indigo-400 animate-pulse uppercase tracking-widest">UPLOADING...</p> : 
-                             form.image_url ? <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">✓ PHOTO UPLOADED</p> : 
-                             <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest group-hover:text-white transition">Upload Item Photo</p>}
+                            {uploading ? <p className="text-[10px] font-black text-indigo-400 animate-pulse uppercase tracking-widest">TRANSMITTING...</p> : 
+                             form.image_url ? <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">✓ EVIDENCE ACQUIRED</p> : 
+                             <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest group-hover:text-white transition">Acquire Visual Representation</p>}
                         </label>
                     </div>
-                    <button type="submit" disabled={saving || uploading} className="btn-primary w-full py-5 text-[10px] tracking-[0.2em]">
-                        {saving ? 'SAVING...' : editingId ? 'UPDATE ITEM' : 'LIST ITEM'}
+                    <button type="submit" disabled={saving || uploading} className="btn-elite w-full py-5 text-[10px] tracking-[0.2em]">
+                        {saving ? 'TRANSMITTING...' : editingId ? 'UPDATE BASELINE' : 'EXECUTE PITCH REGISTRATION'}
                     </button>
-                    {editingId && <button type="button" onClick={() => { setEditingId(null); setActiveTab('dashboard'); }} className="w-full text-[10px] font-black text-slate-500 hover:text-white transition uppercase tracking-widest pt-4">CANCEL</button>}
+                    {editingId && <button type="button" onClick={() => { setEditingId(null); setActiveTab('dashboard'); }} className="w-full text-[10px] font-black text-slate-500 hover:text-white transition uppercase tracking-widest pt-4">ABORT UPDATE</button>}
                 </form>
             </div>
         </div>
       )}
 
       {activeTab === 'settings' && (
-        <div className="max-w-2xl mx-auto stagger-standard">
-            <div className="glass-primary p-10 rounded-[2.5rem]">
-                <h2 className="text-3xl font-black text-white uppercase tracking-tighter mb-2">Settings</h2>
-                <p className="text-slate-500 mb-8 text-[10px] font-black uppercase tracking-widest">Payment Info</p>
+        <div className="max-w-2xl mx-auto stagger-elite">
+            <div className="glass-elite p-10 rounded-[2.5rem]">
+                <h2 className="text-3xl font-black text-white uppercase tracking-tighter mb-2">Protocol Settings</h2>
+                <p className="text-slate-500 mb-8 text-[10px] font-black uppercase tracking-widest">Revenue Liquidation Configuration</p>
                 
                 <form onSubmit={handleSavePayout} className="space-y-6">
                     <div>
-                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">UPI ID for Payment</label>
-                        <input className="standard-input" value={payoutDetails.upi_id} onChange={e => setPayoutDetails({ upi_id: e.target.value })} required placeholder="yourname@upi" />
-                        <p className="text-[9px] text-slate-600 mt-3 font-black uppercase tracking-widest italic opacity-60">We will use this to send you money after your item is sold.</p>
+                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Institutional UPI ID</label>
+                        <input className="elite-input" value={payoutDetails.upi_id} onChange={e => setPayoutDetails({ upi_id: e.target.value })} required placeholder="identifier@node" />
+                        <p className="text-[9px] text-slate-600 mt-3 font-black uppercase tracking-widest italic opacity-60">Verification via micro-transaction protocols may apply.</p>
                     </div>
-                    <button type="submit" disabled={savingPayout} className="btn-primary px-10 py-5 text-[10px] tracking-[0.2em]">
-                        {savingPayout ? 'SAVING...' : 'SAVE PAYMENT INFO'}
+                    <button type="submit" disabled={savingPayout} className="btn-elite px-10 py-5 text-[10px] tracking-[0.2em]">
+                        {savingPayout ? 'SYNCHRONIZING...' : 'UPDATE DISBURSEMENT PROTOCOL'}
                     </button>
                 </form>
             </div>
