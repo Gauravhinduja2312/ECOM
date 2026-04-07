@@ -104,7 +104,7 @@ export default function ProductDetailPage() {
 
   const handleAddToCart = async () => {
     if (!session) {
-      addToast('Personnel authorization required.', 'error');
+      addToast('Please sign in to continue.', 'error');
       navigate('/auth');
       return;
     }
@@ -112,9 +112,9 @@ export default function ProductDetailPage() {
     setAddingToCart(true);
     try {
       await addToCart(product.id);
-      addToast(`${product.name} synchronized with acquisition cart.`, 'success');
+      addToast(`${product.name} added to your cart.`, 'success');
     } catch (err) {
-      addToast(err.message || 'Synchronization failed.', 'error');
+      addToast(err.message || 'Failed to add to cart.', 'error');
     } finally {
       setAddingToCart(false);
     }
@@ -122,14 +122,14 @@ export default function ProductDetailPage() {
 
   const handleReviewSubmitted = () => {
     loadReviews();
-    addToast('Feedback transmission successful.', 'success');
+    addToast('Review submitted successfully.', 'success');
   };
 
-  if (loading) return <Loader text="Retrieving Asset Specs..." />;
+  if (loading) return <Loader text="Loading product details..." />;
   if (error || !product) return (
     <div className="bg-[#020617] min-h-screen pt-64 flex flex-col items-center">
-      <ErrorMessage message={error || 'Asset Not Found'} />
-      <button onClick={() => navigate('/products')} className="btn-elite mt-8 px-10 py-4 text-[10px]">RETURN TO INVENTORY</button>
+      <ErrorMessage message={error || 'Product Not Found'} />
+      <button onClick={() => navigate('/products')} className="btn-elite mt-8 px-10 py-4 text-[10px]">BACK TO SHOP</button>
     </div>
   );
 
@@ -156,7 +156,7 @@ export default function ProductDetailPage() {
             <div className={`absolute top-6 left-6 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg ${
               inStock ? 'bg-emerald-600 text-white shadow-emerald-600/20' : 'bg-rose-600 text-white shadow-rose-600/20'
             }`}>
-              {inStock ? `INSTOCK: ${product.stock} UNITS` : 'DOMAIN DEPLETED'}
+              {inStock ? `IN STOCK: ${product.stock}` : 'OUT OF STOCK'}
             </div>
           </div>
 
@@ -164,7 +164,7 @@ export default function ProductDetailPage() {
           <div className="flex flex-col justify-center">
             <div className="stagger-children space-y-8">
               <div>
-                <p className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.4em] mb-4">Inventory ID: #{product.id}</p>
+                <p className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.4em] mb-4">Product ID: #{product.id}</p>
                 <h1 className="text-5xl font-black tracking-tight uppercase leading-none">{product.name}</h1>
                 
                 <div className="mt-8 flex items-center gap-6">
@@ -172,7 +172,7 @@ export default function ProductDetailPage() {
                     <StarRating rating={ratingSummary.averageRating || 0} size="sm" />
                     <span className="text-xs font-black text-indigo-400 ml-2">{ratingSummary.averageRating || 0}</span>
                   </div>
-                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{ratingSummary.totalReviews || 0} USER VERIFICATIONS</p>
+                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{ratingSummary.totalReviews || 0} REVIEWS</p>
                 </div>
               </div>
 
@@ -181,7 +181,7 @@ export default function ProductDetailPage() {
               </p>
 
               <div className="flex flex-col gap-2">
-                <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Acquisition Outlay</p>
+                <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Price</p>
                 <p className="text-5xl font-black tracking-tighter text-white">{formatCurrency(product.price)}</p>
               </div>
 
@@ -191,11 +191,11 @@ export default function ProductDetailPage() {
                   disabled={!inStock || addingToCart}
                   className="btn-elite px-12 py-6 text-[11px] tracking-[0.25em] flex items-center gap-4 shadow-[0_0_40px_rgba(79,70,229,0.25)]"
                 >
-                  {addingToCart ? 'SYNCHRONIZING...' : inStock ? 'ADD TO ACQUISITION CART' : 'DOMAIN DEPLETED'}
+                  {addingToCart ? 'ADDING...' : inStock ? 'ADD TO CART' : 'OUT OF STOCK'}
                 </button>
                 
                 <div className="px-6 py-4 rounded-2xl bg-white/5 border border-white/5">
-                  <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Domain Class</p>
+                  <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Category</p>
                   <p className="text-xs font-black text-white uppercase tracking-widest">{product.category || 'GENERAL'}</p>
                 </div>
               </div>
@@ -206,7 +206,7 @@ export default function ProductDetailPage() {
         {/* Feedback Section */}
         <div className="mt-32 space-y-16">
           <div className="flex items-center gap-8">
-            <h2 className="text-3xl font-black uppercase tracking-tighter">Feedback Domain</h2>
+            <h2 className="text-3xl font-black uppercase tracking-tighter">Customer Reviews</h2>
             <div className="h-px flex-1 bg-white/5"></div>
           </div>
 
@@ -214,7 +214,7 @@ export default function ProductDetailPage() {
             <div className="glass-card p-10 stagger-children">
               <h3 className="text-sm font-black uppercase tracking-widest text-slate-500 mb-8 flex items-center gap-3">
                 <span className="h-2 w-2 rounded-full bg-indigo-500"></span> 
-                Verification Logs
+                Latest Reviews
               </h3>
               <ReviewsList
                 reviews={reviews}
@@ -226,7 +226,7 @@ export default function ProductDetailPage() {
             <div className="glass-card p-10">
               <h3 className="text-sm font-black uppercase tracking-widest text-slate-500 mb-8 flex items-center gap-3">
                 <span className="h-2 w-2 rounded-full bg-emerald-500"></span> 
-                Submit Unit Intel
+                Rate this Product
               </h3>
               <ReviewForm
                 productId={id}
@@ -241,7 +241,7 @@ export default function ProductDetailPage() {
         {/* Related Assets */}
         <div className="mt-32">
           <div className="flex items-center gap-8 mb-16">
-            <h2 className="text-3xl font-black uppercase tracking-tighter">Recommended Intel</h2>
+            <h2 className="text-3xl font-black uppercase tracking-tighter">You might also like</h2>
             <div className="h-px flex-1 bg-white/5"></div>
           </div>
           <RecommendedProducts productId={id} />

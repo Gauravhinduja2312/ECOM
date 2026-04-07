@@ -27,25 +27,24 @@ export default function Navbar() {
   return (
     <header className="fixed top-8 left-1/2 -translate-x-1/2 z-50 w-[94%] max-w-6xl animate-elite-reveal">
       <nav className="bg-slate-950/80 backdrop-blur-2xl rounded-3xl px-8 py-4 flex items-center justify-between border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
-        {/* Brand Terminal */}
+        {/* Logo */}
         <Link to="/" className="group flex items-center gap-4 transition-all hover:scale-105">
           <div className="h-10 w-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-black text-sm shadow-[0_0_20px_rgba(79,70,229,0.3)] group-hover:rotate-12 transition-transform">
             SM
           </div>
           <div className="hidden lg:block">
-            <span className="text-xs font-black tracking-[0.3em] text-white uppercase italic">Student Marketplace</span>
-            <span className="block text-[8px] font-black tracking-[0.4em] text-indigo-400 uppercase -mt-0.5">Elite Commerce Terminal</span>
+            <span className="text-sm font-black tracking-widest text-white uppercase italic">Campus Shop</span>
           </div>
         </Link>
 
-        {/* Tactical Navigation Links */}
+        {/* Menu */}
         <div className="flex items-center gap-2">
           <Link
             to="/products"
             onMouseEnter={preloadProductsPage}
             className="hidden md:flex items-center gap-2 px-6 py-2 text-[10px] font-black uppercase tracking-[0.25em] text-slate-500 hover:text-white transition group"
           >
-            Explore <span className="text-indigo-500 transition-transform group-hover:translate-x-1">→</span>
+            Shop <span className="text-indigo-500 transition-transform group-hover:translate-x-1">→</span>
           </Link>
 
           <Link
@@ -69,7 +68,7 @@ export default function Navbar() {
                   onMouseEnter={() => Promise.allSettled([preloadAdminDashboardPage(), preloadAddProductPage()])}
                   className="hidden sm:flex btn-elite px-6 py-2.5 text-[9px] tracking-[0.2em]"
                 >
-                  Workspace
+                  Admin
                 </Link>
               ) : (
                 <>
@@ -86,7 +85,7 @@ export default function Navbar() {
                     className="group flex items-center gap-4 pl-3 pr-2 py-1.5 rounded-2xl bg-white/5 border border-white/5 hover:border-indigo-500/20 transition-all hover:bg-white/[0.08]"
                   >
                     <div className="hidden lg:block text-right">
-                      <p className="text-[8px] font-black text-slate-500 tracking-widest uppercase">Identity</p>
+                      <p className="text-[8px] font-black text-slate-500 tracking-widest uppercase">Account</p>
                       <p className="text-[10px] font-black text-white tracking-tighter uppercase -mt-1">{profile.email?.split('@')[0]}</p>
                     </div>
                     <div className={`h-8 w-8 rounded-xl flex items-center justify-center text-sm border-2 transition-all group-hover:scale-110 ${
@@ -102,7 +101,7 @@ export default function Navbar() {
               <button
                 onClick={handleLogout}
                 className="h-10 w-10 rounded-xl flex items-center justify-center text-slate-500 hover:text-red-500 hover:bg-red-500/10 transition group"
-                title="Logout Identity"
+                title="Sign Out"
               >
                 <span className="text-xl group-hover:scale-110 transition-transform">↪</span>
               </button>
@@ -113,7 +112,7 @@ export default function Navbar() {
               onMouseEnter={preloadAuthPage}
               className="btn-elite px-6 py-2.5 text-[9px] tracking-[0.2em]"
             >
-              Initialize Identity
+              Sign In
             </Link>
           )}
         </div>

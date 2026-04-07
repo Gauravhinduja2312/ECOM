@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   CategoryScale,
@@ -109,7 +109,7 @@ export default function AdminDashboardPage() {
       if (logsResult.status === 'fulfilled') setInventoryLogs(logsResult.value.data || []);
 
     } catch (error) {
-      addToast('Terminal data synchronization failed.', 'error');
+      addToast('Failed to load dashboard data.', 'error');
     } finally {
       setLoading(false);
     }
@@ -130,7 +130,7 @@ export default function AdminDashboardPage() {
       await generateAndDownloadInvoice(order, items);
       addToast('Invoice generated and transmitted.', 'success');
     } catch (error) {
-      addToast('Invoice generation protocol failed.', 'error');
+      addToast('Failed to generate invoice.', 'error');
     } finally {
       setDownloadingInvoiceId(null);
     }
@@ -179,7 +179,7 @@ export default function AdminDashboardPage() {
       addToast(`Review completed: ${action}.`, 'success');
       await fetchAdminData();
     } catch (error) {
-      addToast(error.message || 'Review protocol failed.', 'error');
+      addToast(error.message || 'Review failed.', 'error');
     } finally {
       setReviewLoadingId(null);
     }
@@ -196,16 +196,16 @@ export default function AdminDashboardPage() {
       await apiRequest(`/api/admin/products/${submissionId}/acquire`, 'PATCH', session.access_token, {
         finalPrice: Number(finalPrice)
       });
-      addToast('Asset acquired and moved to live inventory.', 'success');
+      addToast('Item added to live store.', 'success');
       await fetchAdminData();
     } catch (error) {
-      addToast(error.message || 'Acquisition protocol failed.', 'error');
+      addToast(error.message || 'Failed to add item.', 'error');
     } finally {
       setAcquireLoadingId(null);
     }
   };
 
-  if (loading) return <Loader text="Synchronizing Admin Terminal..." />;
+  if (loading) return <Loader text="Loading Admin Dashboard..." />;
 
   const pendingProducts = submissions.filter((sub) => sub.verification_status === 'pending');
   const verifiedProducts = submissions.filter((sub) => sub.verification_status === 'verified');
@@ -225,18 +225,18 @@ export default function AdminDashboardPage() {
           <div className="stagger-elite">
             <h1 className="text-5xl font-black tracking-tight uppercase inline-flex items-center gap-5">
               <span className="h-16 w-16 rounded-3xl bg-indigo-600 flex items-center justify-center text-2xl shadow-[0_0_40px_rgba(79,70,229,0.3)]">⚡</span>
-              Elite Terminal
+              Admin Dashboard
             </h1>
-            <p className="mt-4 text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">Marketplace Executive Control Domain</p>
+            <p className="mt-4 text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">Campus Management Center</p>
           </div>
           
           <div className="flex gap-2 glass-elite p-1 rounded-2xl">
             {[
               { id: 'products', label: 'Assets', icon: '📦' },
               { id: 'orders', label: 'Orders', icon: '🛒' },
-              { id: 'payouts', label: 'Revenue', icon: '💰' },
-              { id: 'analytics', label: 'Insights', icon: '📊' },
-              { id: 'support', label: 'Domain Support', icon: '🎧' },
+              { id: 'payouts', label: 'Payouts', icon: '💰' },
+              { id: 'analytics', label: 'Stats', icon: '📊' },
+              { id: 'support', label: 'Support', icon: '🎧' },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -258,9 +258,9 @@ export default function AdminDashboardPage() {
           <div className="grid gap-6 md:grid-cols-4 stagger-elite">
             {[
               { label: 'Gross Revenue', value: formatCurrency(analytics.totalRevenue), color: 'text-white' },
-              { label: 'Platform Liquidity', value: formatCurrency((analytics.totalRevenue || 0) - (analytics.totalSellerPayout || 0)), color: 'text-indigo-400' },
-              { label: 'Outlay (Seller Payout)', value: formatCurrency(analytics.totalSellerPayout || 0), color: 'text-emerald-400' },
-              { label: 'Active Personnel', value: users.length, color: 'text-amber-400' },
+              { label: 'Platform Profit', value: formatCurrency((analytics.totalRevenue || 0) - (analytics.totalSellerPayout || 0)), color: 'text-indigo-400' },
+              { label: 'Total Payouts', value: formatCurrency(analytics.totalSellerPayout || 0), color: 'text-emerald-400' },
+              { label: 'Active Users', value: users.length, color: 'text-amber-400' },
             ].map((stat, i) => (
               <div key={i} className="glass-card p-8 group">
                 <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-3">{stat.label}</p>
@@ -276,9 +276,9 @@ export default function AdminDashboardPage() {
           {activeTab === 'products' && (
             <div className="px-10 h-20 border-b border-white/5 flex items-center gap-10 bg-white/5">
               {[
-                { id: 'pending', label: 'Pending Terminal', count: pendingProducts.length },
-                { id: 'verified', label: 'Live Inventory', count: verifiedProducts.length },
-                { id: 'rejected', label: 'Quarantined', count: rejectedProducts.length },
+                { id: 'pending', label: 'New Requests', count: pendingProducts.length },
+                { id: 'verified', label: 'Live Items', count: verifiedProducts.length },
+                { id: 'rejected', label: 'Rejected', count: rejectedProducts.length },
               ].map((subTab) => (
                 <button
                   key={subTab.id}
@@ -303,7 +303,7 @@ export default function AdminDashboardPage() {
                 {displayedProducts.length === 0 ? (
                   <div className="h-64 flex flex-col items-center justify-center border border-dashed border-white/10 rounded-3xl opacity-50">
                     <p className="text-4xl mb-4">📂</p>
-                    <p className="text-[10px] font-black uppercase tracking-widest">Null domain data</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest">No items found</p>
                   </div>
                 ) : (
                   displayedProducts.map((sub) => {
@@ -325,7 +325,7 @@ export default function AdminDashboardPage() {
                               'bg-amber-500/10 text-amber-400'
                             }`}>{sub.verification_status}</span>
                           </div>
-                          <p className="text-xs text-slate-500 font-medium truncate mb-4">Origin: {sub.seller_email}</p>
+                          <p className="text-xs text-slate-500 font-medium truncate mb-4">Seller: {sub.seller_email}</p>
                           <div className="flex gap-6">
                             <div>
                               <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">Valuation</p>
@@ -350,7 +350,7 @@ export default function AdminDashboardPage() {
                                     value={acquireDrafts[sub.id] ?? sub.proposed_price ?? ''}
                                     onChange={(e) => setAcquireDrafts({...acquireDrafts, [sub.id]: e.target.value})}
                                   />
-                                  <button onClick={() => handleAcquire(sub.id, sub.proposed_price)} className="btn-elite px-6 py-3 text-[10px]">EXECUTE ACQUISITION</button>
+                                  <button onClick={() => handleAcquire(sub.id, sub.proposed_price)} className="btn-elite px-6 py-3 text-[10px]">ADD TO STORE</button>
                                 </div>
                               ) : (
                                 <div className="flex flex-col gap-3">
@@ -362,9 +362,9 @@ export default function AdminDashboardPage() {
                                       value={draft.proposedPrice}
                                       onChange={(e) => setReviewDrafts({...reviewDrafts, [sub.id]: {...draft, proposedPrice: e.target.value}})}
                                     />
-                                    <button onClick={() => handleReview(sub.id, 'counter')} className="btn-elite px-6 py-3 text-[10px]">TRANSMIT OFFER</button>
+                                    <button onClick={() => handleReview(sub.id, 'counter')} className="btn-elite px-6 py-3 text-[10px]">SEND OFFER</button>
                                   </div>
-                                  <button onClick={() => handleReview(sub.id, 'reject')} className="text-[9px] font-black text-slate-600 hover:text-rose-500 uppercase tracking-widest transition">Quarantine Domain</button>
+                                  <button onClick={() => handleReview(sub.id, 'reject')} className="text-[9px] font-black text-slate-600 hover:text-rose-500 uppercase tracking-widest transition">Reject Item</button>
                                 </div>
                               )}
                             </>
@@ -379,7 +379,7 @@ export default function AdminDashboardPage() {
 
             {activeTab === 'orders' && (
               <div className="space-y-4">
-                {orders.length === 0 ? <p className="text-center text-slate-500 font-black uppercase tracking-widest py-20">Null order domain</p> : (
+                {orders.length === 0 ? <p className="text-center text-slate-500 font-black uppercase tracking-widest py-20">No orders found</p> : (
                   orders.map((order) => (
                     <div key={order.id} className="glass-card p-8 flex flex-col md:flex-row justify-between items-center gap-8">
                       <div>
@@ -399,15 +399,15 @@ export default function AdminDashboardPage() {
                         </div>
                       </div>
                       
-                      <div className="flex flex-wrap gap-3">
-                        {order.status === 'order_placed' && <button onClick={() => handleUpdateOrderStatus(order.id, 'processing')} className="btn-elite px-6 py-3 text-[10px]">INITIALIZE PROCESSING</button>}
+                      <div className="flex flex-col gap-2">
+                        {order.status === 'order_placed' && <button onClick={() => handleUpdateOrderStatus(order.id, 'processing')} className="btn-elite px-6 py-3 text-[10px]">START PROCESSING</button>}
                         {order.status === 'processing' && (
                           <>
                             <button onClick={() => handleUpdateOrderStatus(order.id, 'ready_for_pickup')} className="btn-elite px-6 py-3 text-[10px] bg-amber-600 shadow-[0_0_20px_rgba(217,119,6,0.3)] border-amber-500/20">READY FOR PICKUP</button>
-                            <button onClick={() => handleUpdateOrderStatus(order.id, 'shipped')} className="btn-elite px-6 py-3 text-[10px]">DISPATCH SHIPMENT</button>
+                            <button onClick={() => handleUpdateOrderStatus(order.id, 'shipped')} className="btn-elite px-6 py-3 text-[10px]">SEND SHIPMENT</button>
                           </>
                         )}
-                        {(order.status === 'shipped' || order.status === 'ready_for_pickup') && <button onClick={() => handleUpdateOrderStatus(order.id, 'completed')} className="btn-elite px-6 py-3 text-[10px] bg-emerald-600 shadow-[0_0_20px_rgba(16,185,129,0.3)] border-emerald-500/20">COMPLETE PROTOCOL</button>}
+                        {(order.status === 'shipped' || order.status === 'ready_for_pickup') && <button onClick={() => handleUpdateOrderStatus(order.id, 'completed')} className="btn-elite px-6 py-3 text-[10px] bg-emerald-600 shadow-[0_0_20px_rgba(16,185,129,0.3)] border-emerald-500/20">MARK COMPLETE</button>}
                         <button onClick={() => handleDownloadInvoice(order)} className="px-6 py-3 bg-white/5 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-white transition">INVOICE</button>
                       </div>
                     </div>
@@ -419,8 +419,8 @@ export default function AdminDashboardPage() {
             {activeTab === 'payouts' && (
               <div className="space-y-6">
                 <div className="flex justify-between items-center mb-8">
-                  <h2 className="text-xl font-black uppercase tracking-tighter">Acquisition Liquidation</h2>
-                  <button onClick={fetchAdminData} className="text-[10px] font-black text-indigo-400 uppercase tracking-widest hover:text-white transition">Synchronize Ledger</button>
+                  <h2 className="text-xl font-black uppercase tracking-tighter">Seller Payouts</h2>
+                  <button onClick={fetchAdminData} className="text-[10px] font-black text-indigo-400 uppercase tracking-widest hover:text-white transition">Refresh List</button>
                 </div>
                 
                 {sellerPayouts.map((payout) => (
@@ -428,7 +428,7 @@ export default function AdminDashboardPage() {
                     <div className="flex flex-wrap justify-between items-start gap-8 mb-10">
                       <div>
                         <h3 className="text-lg font-black uppercase tracking-tighter text-white">{payout.seller_email}</h3>
-                        <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mt-1">Personnel ID: {payout.seller_id}</p>
+                        <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mt-1">User ID: {payout.seller_id}</p>
                       </div>
                       <div className="flex gap-4">
                         <div className="px-6 py-4 rounded-2xl bg-white/5 border border-white/5 text-right">
@@ -436,7 +436,7 @@ export default function AdminDashboardPage() {
                           <p className="text-sm font-black text-amber-400">{formatCurrency(payout.total_unpaid || 0)}</p>
                         </div>
                         <div className="px-6 py-4 rounded-2xl bg-white/5 border border-white/5 text-right">
-                          <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1">Total Disbursed</p>
+                          <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1">Total Paid</p>
                           <p className="text-sm font-black text-emerald-400">{formatCurrency(payout.total_paid || 0)}</p>
                         </div>
                       </div>
@@ -454,7 +454,7 @@ export default function AdminDashboardPage() {
                         disabled={!payout.total_unpaid}
                         className="btn-elite px-10 py-5 text-[10px] disabled:opacity-20"
                       >
-                        FINALIZE LIQUIDATION
+                        MARK AS PAID
                       </button>
                     </div>
                   </div>
@@ -492,7 +492,7 @@ export default function AdminDashboardPage() {
                       <span className="px-3 py-1 rounded-full bg-indigo-500/10 text-indigo-400 text-[8px] font-black uppercase tracking-widest">{ticket.status}</span>
                     </div>
                     <p className="text-slate-400 text-sm mb-6">{ticket.description}</p>
-                    <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest">Origin Node: {ticket.user?.email}</p>
+                    <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest">User Email: {ticket.user?.email}</p>
                   </div>
                 ))}
               </div>

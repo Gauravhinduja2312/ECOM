@@ -33,14 +33,14 @@ export default function OrderTrackingCard({ order, isExpandable = true }) {
               <OrderStatusBadge status={order.status} showIcon={true} />
             </div>
             <p className="mt-2 text-xs font-bold text-slate-400 uppercase tracking-widest">
-              Initiated {new Date(order.created_at).toLocaleDateString()}
+              Placed on {new Date(order.created_at).toLocaleDateString()}
             </p>
           </div>
           <div className="text-right">
             <p className="text-3xl font-black text-indigo-600 tracking-tighter">{formatCurrency(order.total_price)}</p>
             {isExpandable && (
               <button className="mt-2 text-[10px] font-black text-indigo-400 uppercase tracking-widest hover:text-indigo-600 transition">
-                {isExpanded ? 'Collapse' : 'View Journey'}
+                {isExpanded ? 'Collapse' : 'Track Order'}
               </button>
             )}
           </div>
@@ -52,26 +52,26 @@ export default function OrderTrackingCard({ order, isExpandable = true }) {
         <div className="px-6 pb-8 sm:px-8 stagger-children">
           {/* Status Timeline */}
           <div className="rounded-3xl bg-slate-50 border border-slate-100 p-6 mb-6">
-            <h4 className="mb-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Live Logistics Tracking</h4>
+            <h4 className="mb-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Order Status</h4>
             <OrderStatusTimeline currentStatus={order.status} statusUpdatedAt={order.status_updated_at} />
           </div>
 
           <div className="grid gap-6 md:grid-cols-2">
             {/* Pickup Details */}
             <div className="rounded-3xl border border-slate-100 p-6 hover:bg-slate-50 transition">
-              <h4 className="mb-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Fulfillment Details</h4>
+              <h4 className="mb-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Delivery Info</h4>
               <div className="space-y-4">
                 <div className="flex items-center gap-3">
                   <div className="h-8 w-8 rounded-full bg-indigo-50 flex items-center justify-center text-xs">📍</div>
                   <div>
                     <p className="text-[10px] font-black text-slate-400 uppercase">Location</p>
-                    <p className="text-sm font-bold text-slate-900">{order.pickup_location || 'Verification Pending'}</p>
+                    <p className="text-sm font-bold text-slate-900">{order.pickup_location || 'To be confirmed'}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="h-8 w-8 rounded-full bg-violet-50 flex items-center justify-center text-xs">⏰</div>
                   <div>
-                    <p className="text-[10px] font-black text-slate-400 uppercase">Schedule</p>
+                    <p className="text-[10px] font-black text-slate-400 uppercase">Pickup Time</p>
                     <p className="text-sm font-bold text-slate-900">{pickupDateTime}</p>
                   </div>
                 </div>
@@ -80,7 +80,7 @@ export default function OrderTrackingCard({ order, isExpandable = true }) {
 
             {/* Order Items */}
             <div className="rounded-3xl border border-slate-100 p-6 hover:bg-slate-50 transition">
-              <h4 className="mb-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Items In Parcel</h4>
+              <h4 className="mb-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Items In Order</h4>
               <div className="space-y-3">
                 {order.items?.map((item) => (
                   <div key={item.id} className="flex items-center justify-between">
@@ -100,7 +100,7 @@ export default function OrderTrackingCard({ order, isExpandable = true }) {
               onClick={() => window.location.href = `/order/${order.id}`}
               className="w-full btn-elite py-4 text-xs tracking-widest uppercase"
             >
-              Request Support for this Order
+              Need Help with this Order?
             </button>
           </div>
         </div>

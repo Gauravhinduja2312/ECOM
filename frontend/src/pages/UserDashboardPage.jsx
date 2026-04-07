@@ -62,9 +62,9 @@ export default function UserDashboardPage() {
     try {
       await apiRequest(`/api/notifications/${id}/read`, 'PATCH', session.access_token);
       setNotifications(notifications.map(n => n.id === id ? { ...n, is_read: true } : n));
-      addToast('Notification acknowledged.', 'success');
+      addToast('Notification marked as read.', 'success');
     } catch (err) {
-      addToast('Status update failed.', 'error');
+      addToast('Failed to update.', 'error');
     }
   };
 
@@ -84,15 +84,15 @@ export default function UserDashboardPage() {
        setShowTicketForm(false);
        setTicketSubject('');
        setTicketDescription('');
-       addToast('Support request transmitted.', 'success');
+       addToast('Support request sent.', 'success');
     } catch (err) {
-      addToast('Transmission failed.', 'error');
+      addToast('Failed to send request.', 'error');
     } finally {
       setSubmittingTicket(false);
     }
   };
 
-  if (loading) return <Loader text="Synchronizing Elite Workspace..." />;
+  if (loading) return <Loader text="Loading your dashboard..." />;
 
   return (
     <div className="bg-[#020617] min-h-screen pt-64 pb-20 stagger-elite">
@@ -102,16 +102,16 @@ export default function UserDashboardPage() {
         <div className="lg:col-span-8">
           <div className="flex items-center gap-3 mb-6">
             <div className="px-3 py-1 bg-white/5 border border-white/5 rounded-md text-[9px] font-black uppercase tracking-widest text-slate-500">
-              Identity Identifier: {profile.id?.slice(0, 8)}
+              User ID: {profile.id?.slice(0, 8)}
             </div>
           </div>
           <h1 className="text-6xl md:text-8xl font-black tracking-tight leading-[0.8] mb-6 text-white truncate uppercase">
-            {profile.role === 'admin' ? 'Administrator' : 'Commander'} <br />
+            {profile.role === 'admin' ? 'Administrator' : 'Welcome back,'} <br />
             <span className="text-indigo-400">{profile.email?.split('@')[0]}</span>
           </h1>
           <p className="max-w-xl text-lg text-slate-500 font-medium leading-relaxed">
-            Welcome to your primary Student Marketplace Workspace. <br />
-            Track, analyze and scale your institutional commerce activities.
+            Welcome to your dashboard. <br />
+            Manage your orders, track items, and view your points.
           </p>
         </div>
 
@@ -121,7 +121,7 @@ export default function UserDashboardPage() {
             <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-indigo-500/10 blur-3xl group-hover:scale-125 transition-transform duration-1000"></div>
             <div className="relative z-10 flex justify-between items-start">
               <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-400">Status Tier</p>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-400">Membership Tier</p>
                 <h3 className="text-3xl font-black tracking-tighter uppercase italic text-white">{stats.tier}</h3>
               </div>
               <div className="h-10 w-10 border border-white/10 rounded-xl flex items-center justify-center text-xl bg-white/5">
@@ -131,7 +131,7 @@ export default function UserDashboardPage() {
 
             <div className="relative z-10 mt-12">
               <div className="flex justify-between items-end mb-3">
-                <div className="text-3xl font-black text-white">{stats.points} <span className="text-sm font-bold opacity-40">EXP</span></div>
+                <div className="text-3xl font-black text-white">{stats.points} <span className="text-sm font-bold opacity-40">Points</span></div>
                 <div className="text-[10px] font-black uppercase tracking-widest opacity-40 text-white">To {stats.nextTier}</div>
               </div>
               <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
@@ -145,14 +145,14 @@ export default function UserDashboardPage() {
       {/* Primary Bento Workspace */}
       <div className="grid lg:grid-cols-12 gap-8 mb-20">
         <div className="lg:col-span-3 glass-card p-8 group">
-          <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Network Liquidity</p>
+          <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Total Spent</p>
           <h3 className="text-3xl font-black text-white tracking-tighter group-hover:translate-x-2 transition-transform">{formatCurrency(stats.spending)}</h3>
-          <p className="mt-8 text-[9px] font-bold text-slate-600 uppercase tracking-widest">Total Acquisitions</p>
+          <p className="mt-8 text-[9px] font-bold text-slate-600 uppercase tracking-widest">Total purchases</p>
         </div>
         <div className="lg:col-span-3 glass-card p-8 group">
-          <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Active Logistics</p>
-          <h3 className="text-3xl font-black text-white tracking-tighter group-hover:translate-x-2 transition-transform">{stats.pending} Parcel</h3>
-          <p className="mt-8 text-[9px] font-bold text-slate-600 uppercase tracking-widest">Live Transmissions</p>
+          <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Active Orders</p>
+          <h3 className="text-3xl font-black text-white tracking-tighter group-hover:translate-x-2 transition-transform">{stats.pending} Items</h3>
+          <p className="mt-8 text-[9px] font-bold text-slate-600 uppercase tracking-widest">Ongoing orders</p>
         </div>
 
         <div className="lg:col-span-6 glass-card px-8 flex items-center gap-10">
@@ -180,10 +180,10 @@ export default function UserDashboardPage() {
               orders.map(order => <OrderTrackingCard key={order.id} order={order} />)
             ) : (
               <div className="py-40 text-center glass-card border-dashed border-white/5 opacity-60">
-                <div className="text-6xl mb-8">🛰️</div>
-                <h3 className="text-2xl font-black text-white uppercase tracking-tighter mb-4">No Active Transmissions</h3>
-                <p className="text-slate-500 text-sm mb-10 max-w-xs mx-auto uppercase tracking-widest font-black">Initialize your first acquisition deal from the catalog.</p>
-                <a href="/products" className="btn-elite text-[9px] inline-block px-10">Enter Catalog</a>
+                <div className="text-6xl mb-8">📦</div>
+                <h3 className="text-2xl font-black text-white uppercase tracking-tighter mb-4">No active orders</h3>
+                <p className="text-slate-500 text-sm mb-10 max-w-xs mx-auto uppercase tracking-widest font-black">Browse the shop to place your first order.</p>
+                <a href="/products" className="btn-elite text-[9px] inline-block px-10">Shop Now</a>
               </div>
             )}
           </div>
@@ -195,7 +195,7 @@ export default function UserDashboardPage() {
               <div key={n.id} className={`glass-card p-10 group border-l-4 transition-all ${n.is_read ? 'border-transparent' : 'border-indigo-600 bg-white/[0.02]'}`}>
                 <div className="flex justify-between items-start gap-10">
                   <div className="flex-1">
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-500 mb-4">{n.type?.replace('_', ' ') || 'SYSTEM OVERRIDE'}</p>
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-500 mb-4">{n.type?.replace('_', ' ') || 'SYSTEM NOTIFICATION'}</p>
                     <h4 className="text-2xl font-black text-white tracking-tighter mb-2">{n.title}</h4>
                     <p className="text-slate-400 font-medium leading-relaxed">{n.message}</p>
                     <p className="mt-8 text-[9px] font-black text-slate-600 uppercase tracking-widest">{new Date(n.created_at).toLocaleString()}</p>
@@ -205,21 +205,21 @@ export default function UserDashboardPage() {
                       onClick={() => handleAcknowledgeNotification(n.id)} 
                       className="px-6 py-2 rounded-xl border border-white/10 text-[9px] font-black uppercase tracking-widest hover:bg-white/10 transition text-white"
                     >
-                      Acknowledge
+                      Clear
                     </button>
                   )}
                 </div>
               </div>
             ))}
-            {notifications.length === 0 && <div className="py-20 text-center text-slate-700 font-black uppercase tracking-widest text-[11px]">Zero Network Alerts</div>}
+            {notifications.length === 0 && <div className="py-20 text-center text-slate-700 font-black uppercase tracking-widest text-[11px]">No notifications</div>}
           </div>
         )}
 
         {activeTab === 'support' && (
           <div className="grid lg:grid-cols-12 gap-8 items-start">
             <div className="lg:col-span-4">
-              <h3 className="text-4xl font-black text-white tracking-tighter uppercase mb-6">Service Protocol</h3>
-              <p className="text-slate-500 font-medium mb-10 leading-relaxed uppercase text-sm tracking-widest">Open a direct line to our fulfillment engineers.</p>
+              <h3 className="text-4xl font-black text-white tracking-tighter uppercase mb-6">Support</h3>
+              <p className="text-slate-500 font-medium mb-10 leading-relaxed uppercase text-sm tracking-widest">Message our team for any issues or help.</p>
               <button 
                 onClick={() => setShowTicketForm(!showTicketForm)} 
                 className="w-full btn-elite py-5 uppercase text-[10px]"
@@ -237,8 +237,8 @@ export default function UserDashboardPage() {
                       <input required value={ticketSubject} onChange={e => setTicketSubject(e.target.value)} className="elite-input" placeholder="e.g. Identity verification issue" />
                     </div>
                     <div>
-                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4 block">Detailed Directive</label>
-                      <textarea required value={ticketDescription} onChange={e => setTicketDescription(e.target.value)} rows="4" className="elite-input" placeholder="Describe the protocol error..." />
+                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4 block">Problem Details</label>
+                      <textarea required value={ticketDescription} onChange={e => setTicketDescription(e.target.value)} rows="4" className="elite-input" placeholder="Explain the issue..." />
                     </div>
                     <button disabled={submittingTicket} className="btn-elite w-full py-5 text-[10px] tracking-[0.2em]">{submittingTicket ? 'Transmitting...' : 'Send Request'}</button>
                   </div>
@@ -248,7 +248,7 @@ export default function UserDashboardPage() {
               {supportTickets.map(ticket => (
                 <div key={ticket.id} className="glass-card p-10 flex justify-between items-start border-l-4 border-slate-700">
                   <div className="flex-1">
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-2">Protocol Ticket #{ticket.id.slice(0, 6)}</p>
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-2">Support Ticket #{ticket.id.slice(0, 6)}</p>
                     <h4 className="text-xl font-black text-white tracking-tighter mb-2 uppercase">{ticket.subject}</h4>
                     <p className="text-slate-500 font-medium text-sm">{ticket.description}</p>
                   </div>

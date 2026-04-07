@@ -114,7 +114,7 @@ export default function AuthPage() {
     };
   }, [isSignup, password, isPasswordValid]);
 
-  if (authLoading || (session && !profile)) return <Loader text="Synchronizing Identity Domain..." />;
+  if (authLoading || (session && !profile)) return <Loader text="Loading account details..." />;
   if (session && profile) return <Navigate to={profile.role === 'admin' ? '/admin' : '/select-role'} replace />;
 
   const handleSubmit = async (event) => {
@@ -140,10 +140,10 @@ export default function AuthPage() {
     try {
       if (isSignup) {
         await signUp(email, password, { fullName, phone });
-        addToast('Identity successfully registered.', 'success');
+        addToast('Account created successfully.', 'success');
       } else {
         await signIn(email, password);
-        addToast('Identity authenticated. Terminal access granted.', 'success');
+        addToast('Signed in successfully.', 'success');
       }
     } catch (submitError) {
       setError(submitError.message);
@@ -168,10 +168,10 @@ export default function AuthPage() {
               {isSignup ? '🧬' : '🔐'}
             </div>
             <h1 className="text-4xl md:text-5xl font-black tracking-tight text-white uppercase mb-4">
-              {isSignup ? 'Initialize Account' : 'Identity Verification'}
+              {isSignup ? 'Create Account' : 'Sign In'}
             </h1>
             <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.25em]">
-              {isSignup ? 'Establish your presence in the ecosystem' : 'Access the student commerce terminal'}
+              {isSignup ? 'Join the campus marketplace' : 'Sign in to your account'}
             </p>
             <div className="mt-8 p-3 rounded-xl bg-white/5 border border-white/5 text-[9px] font-black text-indigo-400 uppercase tracking-widest italic">
               Restricted Domain: @ves.ac.in credentials only
@@ -194,11 +194,11 @@ export default function AuthPage() {
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Mobile Node</label>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Phone Number</label>
                   <input
                     type="tel"
                     className="elite-input"
-                    placeholder="10-digit transmission ID"
+                    placeholder="Enter 10-digit number"
                     value={phone}
                     onChange={(event) => setPhone(event.target.value)}
                   />
@@ -219,14 +219,14 @@ export default function AuthPage() {
             </div>
 
             <div>
-              <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Access Code</label>
+              <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Password</label>
               <div className="relative">
                 <input
                   type={showPassword ? 'text' : 'password'}
                   required
                   minLength={10}
                   className="elite-input pr-20"
-                  placeholder="Encryption sequence"
+                  placeholder="At least 10 characters"
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
                 />
@@ -261,8 +261,8 @@ export default function AuthPage() {
                       </div>
                     ))}
                   </div>
-                  {breachChecking && <p className="mt-4 text-[9px] font-bold text-indigo-400 animate-pulse uppercase tracking-widest">Breach DB Synchronizing...</p>}
-                  {!breachChecking && breachCount > 0 && <p className="mt-4 text-[9px] font-black text-rose-500 uppercase tracking-widest">Protocol Violation: {breachCount} Known Breaches</p>}
+                  {breachChecking && <p className="mt-4 text-[9px] font-bold text-indigo-400 animate-pulse uppercase tracking-widest">Checking password safety...</p>}
+                  {!breachChecking && breachCount > 0 && <p className="mt-4 text-[9px] font-black text-rose-500 uppercase tracking-widest">Safety Warning: {breachCount} known breaches</p>}
                 </div>
               )}
             </div>
@@ -298,7 +298,7 @@ export default function AuthPage() {
               disabled={loading}
               className="btn-elite w-full py-5 text-[10px] tracking-[0.25em]"
             >
-              {loading ? 'Transmitting Data...' : isSignup ? 'EXECUTE REGISTRATION' : 'AUTHENTICATE IDENTITY'}
+              {loading ? 'Working...' : isSignup ? 'CREATE ACCOUNT' : 'SIGN IN'}
             </button>
           </form>
 
@@ -309,7 +309,7 @@ export default function AuthPage() {
               className="text-[10px] font-black text-slate-500 hover:text-white transition uppercase tracking-[0.2em]"
               onClick={() => navigate(isSignup ? '/login' : '/signup')}
             >
-              {isSignup ? '← Return to verification portal' : '→ Initialize new identity node'}
+              {isSignup ? '← Back to login' : '→ Create a new account'}
             </button>
           </div>
         </div>

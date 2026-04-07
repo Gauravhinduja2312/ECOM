@@ -44,10 +44,10 @@ export default function ProductsPage() {
 
     try {
       await addToCart(productId);
-      addToast('Asset synchronized with acquisition cart.', 'success');
+      addToast('Item added to cart!', 'success');
     } catch (addError) {
       setError(addError.message || 'Failed to add product to cart.');
-      addToast(addError.message || 'Synchronization failed.', 'error');
+      addToast(addError.message || 'Failed to add to cart.', 'error');
     }
   };
 
@@ -177,7 +177,7 @@ export default function ProductsPage() {
     };
   }, [profile?.id, visibleProducts]);
 
-  if (loading) return <Loader text="Synchronizing Catalog Domain..." />;
+  if (loading) return <Loader text="Loading shop..." />;
 
   return (
     <div className="bg-[#020617] min-h-screen pt-64 pb-20 stagger-elite text-white">
@@ -186,29 +186,29 @@ export default function ProductsPage() {
         <div>
           <h1 className="text-4xl md:text-6xl font-black tracking-tight uppercase inline-flex items-center gap-5">
             <span className="h-16 w-16 rounded-3xl bg-indigo-600 flex items-center justify-center text-3xl shadow-[0_0_40px_rgba(79,70,229,0.3)]">📦</span>
-            Campus Catalog
+            Browse Shop
           </h1>
-          <p className="mt-4 text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">Global Inventory Hub · Verified Assets Only</p>
+          <p className="mt-4 text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">All Campus Items · Safe & Verified</p>
         </div>
         <div className="flex flex-col items-end">
-          <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Active Persistence</p>
-          <p className="text-3xl font-black text-indigo-400 tracking-tighter">{filteredProducts.length} <span className="text-sm opacity-40">UNITS</span></p>
+          <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Available</p>
+          <p className="text-3xl font-black text-indigo-400 tracking-tighter">{filteredProducts.length} <span className="text-sm opacity-40">ITEMS</span></p>
         </div>
       </div>
 
       <div className="glass-elite grid gap-8 rounded-[2.5rem] p-10 lg:grid-cols-2 mb-20 border border-white/5 shadow-2xl">
         <div className="space-y-3">
-          <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-4 block">Search Intelligence</label>
+          <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-4 block">Search</label>
           <input
             type="text"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="e.g. Protocol Hardware, Textbook Intel..."
+            placeholder="Search for items, books, or electronics..."
             className="elite-input px-8 py-5"
           />
         </div>
         <div className="space-y-3">
-          <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-4 block">Domain Filter</label>
+          <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-4 block">Category</label>
           <select
             value={category}
             onChange={(event) => setCategory(event.target.value)}
@@ -228,9 +228,9 @@ export default function ProductsPage() {
       {recommendedProducts.length > 0 && (
         <div className="mb-24 space-y-12">
           <div className="flex items-center gap-8">
-            <h2 className="text-3xl font-black uppercase tracking-tighter">Recommended Intel</h2>
+            <h2 className="text-3xl font-black uppercase tracking-tighter">Recommended for You</h2>
             <div className="h-px flex-1 bg-white/5"></div>
-            <p className="text-[10px] font-black uppercase tracking-widest text-indigo-400">Tailored Assets</p>
+            <p className="text-[10px] font-black uppercase tracking-widest text-indigo-400">Based on your interest</p>
           </div>
           <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-3">
             {recommendedProducts.map((product) => (
@@ -242,9 +242,9 @@ export default function ProductsPage() {
 
       <div className="space-y-12">
         <div className="flex items-center gap-8">
-          <h2 className="text-3xl font-black uppercase tracking-tighter">Full Inventory</h2>
+          <h2 className="text-3xl font-black uppercase tracking-tighter">All Products</h2>
           <div className="h-px flex-1 bg-white/5"></div>
-          <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Baseline Records</p>
+          <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Full list</p>
         </div>
 
         {allProductsList.length > 0 ? (
@@ -256,8 +256,8 @@ export default function ProductsPage() {
         ) : (
           <div className="glass-card flex flex-col items-center justify-center p-20 text-center border-dashed border-white/5 opacity-50">
             <p className="text-6xl mb-8 animate-pulse">📡</p>
-            <h3 className="text-2xl font-black uppercase tracking-tighter mb-4 text-white">No Assets Located</h3>
-            <p className="text-slate-500 text-sm max-w-sm font-medium leading-relaxed">The catalog domain is currently empty or your transmission query returned null results.</p>
+            <h3 className="text-2xl font-black uppercase tracking-tighter mb-4 text-white">No items found</h3>
+            <p className="text-slate-500 text-sm max-w-sm font-medium leading-relaxed">We couldn't find any items matching your search or the shop is currently empty.</p>
           </div>
         )}
       </div>

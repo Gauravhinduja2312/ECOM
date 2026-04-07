@@ -11,7 +11,7 @@ export default function CartPage() {
     0
   );
 
-  if (loading) return <Loader text="Synchronizing Cart Domain..." />;
+  if (loading) return <Loader text="Loading cart..." />;
 
   return (
     <div className="bg-[#020617] min-h-screen pt-64 pb-20 text-white">
@@ -21,13 +21,13 @@ export default function CartPage() {
           <div>
             <h1 className="text-4xl md:text-5xl font-black tracking-tight uppercase inline-flex items-center gap-5">
               <span className="h-14 w-14 rounded-2xl bg-indigo-600 flex items-center justify-center text-2xl shadow-[0_0_30px_rgba(79,70,229,0.3)]">🛒</span>
-              Acquisition Cart
+              Your Cart
             </h1>
-            <p className="mt-4 text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">Inventory Staging Area · {items.length} Units</p>
+            <p className="mt-4 text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">Ready to checkout · {items.length} Items</p>
           </div>
           {items.length > 0 && (
             <div className="flex flex-col items-end">
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Estimated Outlay</p>
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Total Amount</p>
               <p className="text-3xl font-black text-indigo-400 tracking-tighter">{formatCurrency(total)}</p>
             </div>
           )}
@@ -36,10 +36,10 @@ export default function CartPage() {
         {items.length === 0 ? (
           <div className="glass-card p-20 text-center flex flex-col items-center">
             <div className="h-24 w-24 rounded-full bg-white/5 flex items-center justify-center text-5xl mb-8 animate-pulse">🧺</div>
-            <h2 className="text-2xl font-black uppercase tracking-tighter mb-4">Cart Domain Empty</h2>
-            <p className="text-slate-500 text-sm max-w-sm mb-10 leading-relaxed font-medium">Search the terminal inventory to acquire assets for your acquisition domain.</p>
+            <h2 className="text-2xl font-black uppercase tracking-tighter mb-4">Your cart is empty</h2>
+            <p className="text-slate-500 text-sm max-w-sm mb-10 leading-relaxed font-medium">Browse the shop to find items you need.</p>
             <Link to="/products" className="btn-elite px-10 py-5 text-[10px] tracking-[0.2em]">
-              BROWSE TERMINAL INVENTORY
+              GO TO SHOP
             </Link>
           </div>
         ) : (
@@ -95,10 +95,10 @@ export default function CartPage() {
 
             <div className="pt-10 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-8">
               <Link to="/products" className="text-[10px] font-black text-slate-500 hover:text-white transition uppercase tracking-[0.2em]">
-                ← Continue Inventory Search
+                ← Continue Shopping
               </Link>
               <Link to="/checkout" className="btn-elite px-12 py-6 text-[11px] tracking-[0.25em] w-full md:w-auto shadow-[0_0_30px_rgba(79,70,229,0.3)]">
-                EXECUTE CHECKOUT PROTOCOL
+                PROCEED TO CHECKOUT
               </Link>
             </div>
           </div>
