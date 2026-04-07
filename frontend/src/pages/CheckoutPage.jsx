@@ -5,6 +5,8 @@ import { useCart } from '../services/CartContext';
 import { apiRequest } from '../services/api';
 import ErrorMessage from '../components/ErrorMessage';
 import { formatCurrency } from '../utils/format';
+import { useToast } from '../services/ToastContext';
+import Loader from '../components/Loader';
 
 function loadRazorpayScript() {
   return new Promise((resolve) => {
@@ -19,6 +21,7 @@ function loadRazorpayScript() {
 export default function CheckoutPage() {
   const { session, profile } = useAuth();
   const { items, clearCart } = useCart();
+  const { addToast } = useToast();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -34,23 +37,24 @@ export default function CheckoutPage() {
     setError('');
 
     if (!items.length) {
-      setError('Cart is empty');
+      setError('Acquisition cart is empty. Protocol aborted.');
       return;
     }
 
     if (!pickupLocation.trim()) {
-      setError('Pickup location is required');
+      setError('Logistics pickup node is required.');
       return;
     }
 
     if (!pickupTime) {
-      setError('Pickup date and time are required');
+      setError('Temporal coordination (Time) is required.');
       return;
     }
 
     const scriptLoaded = await loadRazorpayScript();
     if (!scriptLoaded) {
-      setError('Failed to load Razorpay checkout');
+      addToast('Payment gateway transmission failed.', 'error');
+      setError('Failed to load Razorpay checkout.');
       return;
     }
 
@@ -72,8 +76,8 @@ export default function CheckoutPage() {
         key: import.meta.env.VITE_RAZORPAY_KEY_ID,
         amount: paymentOrder.amount,
         currency: paymentOrder.currency,
-        name: 'Student Marketplace',
-        description: 'Order Payment',
+        name: 'Elite Marketplace',
+        description: 'Inventory Acquisition Payment',
         order_id: paymentOrder.id,
         handler: async function onPaymentSuccess(response) {
           try {
@@ -99,16 +103,19 @@ export default function CheckoutPage() {
             );
 
             await clearCart();
+            addToast('Transaction complete. Order sequence initialized.', 'success');
             navigate(`/order-success/${verification.order.id}`);
           } catch (verifyError) {
             setError(verifyError.message);
+            addToast('Transaction verification failed.', 'error');
           }
         },
         prefill: {
           email: profile?.email,
+          name: profile?.name || 'Personnel',
         },
         theme: {
-          color: '#0f172a',
+          color: '#6366f1',
         },
       };
 
@@ -116,73 +123,126 @@ export default function CheckoutPage() {
       paymentObject.open();
     } catch (checkoutError) {
       setError(checkoutError.message);
+      addToast('Initiation failed.', 'error');
     } finally {
       setLoading(false);
     }
   };
 
+  if (!items.length && !loading) {
+     return (
+      <div className="bg-[#020617] min-h-screen pt-64 flex flex-col items-center px-6">
+        <div className="glass-card p-12 text-center max-w-lg">
+          <p className="text-4xl mb-6">🧺</p>
+          <h2 className="text-2xl font-black uppercase tracking-tighter mb-4">Cart Domain Null</h2>
+          <button onClick={() => navigate('/products')} className="btn-elite px-10 py-4 text-[10px] tracking-widest">RETURN TO INVENTORY</button>
+        </div>
+      </div>
+     );
+  }
+
   return (
-    <section className="mx-auto max-w-4xl px-4 py-8 animate-fade-in-up sm:py-10">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <h1 className="inline-flex items-center gap-2 text-2xl font-black tracking-tight text-slate-900 sm:text-3xl">
-          <span className="icon-pill">💳</span>
-          Checkout
-        </h1>
-        <p className="text-sm text-slate-600">Secure Razorpay payment</p>
-      </div>
-
-      <div className="glass-panel soft-ring mt-6 rounded-2xl p-5 sm:p-6">
-        <p className="text-slate-700">Items in order: <span className="font-semibold text-slate-900">{items.length}</span></p>
-        <p className="mt-2 text-sm text-slate-600">Total payable</p>
-        <p className="mt-1 text-3xl font-black text-gradient">{formatCurrency(total)}</p>
-
-        <div className="mt-4 rounded-xl border border-indigo-100 bg-white/70 p-3 text-sm text-slate-700">
-          <p className="font-semibold text-slate-900">Payment details</p>
-          <p className="mt-1">You’ll be redirected to Razorpay to complete this transaction safely.</p>
+    <div className="bg-[#020617] min-h-screen pt-64 pb-20 text-white">
+      <section className="mx-auto max-w-4xl px-6 stagger-elite">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-16">
+          <div>
+            <h1 className="text-4xl md:text-5xl font-black tracking-tight uppercase inline-flex items-center gap-5">
+              <span className="h-14 w-14 rounded-2xl bg-indigo-600 flex items-center justify-center text-2xl shadow-[0_0_30px_rgba(79,70,229,0.3)]">🔐</span>
+              Checkout Protocol
+            </h1>
+            <p className="mt-4 text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">Secure Acquisition Terminal · Encrypted Flow</p>
+          </div>
+          <div className="flex flex-col items-end">
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Final Outlay</p>
+            <p className="text-3xl font-black text-indigo-400 tracking-tighter">{formatCurrency(total)}</p>
+          </div>
         </div>
 
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          <label className="text-sm text-slate-700">
-            Pickup Location
-            <input
-              type="text"
-              value={pickupLocation}
-              onChange={(event) => setPickupLocation(event.target.value)}
-              className="form-input mt-1"
-              placeholder="e.g. Library Desk"
-            />
-          </label>
-          <label className="text-sm text-slate-700">
-            Pickup Time
-            <input
-              type="datetime-local"
-              value={pickupTime}
-              onChange={(event) => setPickupTime(event.target.value)}
-              className="form-input mt-1"
-            />
-          </label>
-        </div>
+        <div className="grid gap-10 lg:grid-cols-3">
+          {/* Summary */}
+          <div className="lg:col-span-2 space-y-8">
+            <div className="glass-card p-10">
+              <h2 className="text-xl font-black uppercase tracking-tighter mb-8 flex items-center gap-3">
+                <span className="h-2 w-2 rounded-full bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]"></span>
+                Logistics Routing
+              </h2>
+              <div className="grid gap-8 sm:grid-cols-2">
+                <div>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Pickup Node</label>
+                  <input
+                    type="text"
+                    value={pickupLocation}
+                    onChange={(event) => setPickupLocation(event.target.value)}
+                    className="elite-input"
+                    placeholder="e.g. Sector-7 Hub"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Temporal Window</label>
+                  <input
+                    type="datetime-local"
+                    value={pickupTime}
+                    onChange={(event) => setPickupTime(event.target.value)}
+                    className="elite-input"
+                  />
+                </div>
+              </div>
+            </div>
 
-        <ErrorMessage message={error} />
-        <button
-          type="button"
-          className="btn-gradient mt-4 inline-flex items-center gap-2 rounded-lg px-5 py-2.5 font-semibold disabled:cursor-not-allowed disabled:opacity-75"
-          onClick={handlePayment}
-          disabled={loading}
-        >
-          {loading ? (
-            <>
-              <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-indigo-200" />
-              Processing...
-            </>
-          ) : (
-            <>
-              <span>🔐</span>
-              Pay with Razorpay
-            </>
-          )}
-        </button>
-      </div>
-    </section>
+            <div className="glass-card p-10">
+              <h2 className="text-xl font-black uppercase tracking-tighter mb-8 flex items-center gap-3">
+                <span className="h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]"></span>
+                Transaction Gateway
+              </h2>
+              <div className="p-6 rounded-2xl bg-indigo-600/5 border border-indigo-500/10 flex items-start gap-4">
+                <span className="text-2xl mt-1">🛡️</span>
+                <div>
+                  <p className="text-xs font-black text-white uppercase tracking-widest mb-1">Razorpay Secure Pipeline</p>
+                  <p className="text-[11px] text-slate-500 leading-relaxed">You will be redirected to a localized secure channel to authorize the acquisition outlay via institutional banking gateways.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Action Area */}
+          <div className="space-y-6">
+            <div className="glass-card p-8 bg-indigo-600/[0.03]">
+              <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-6">Final Ledger</h3>
+              <div className="space-y-4 mb-8">
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-slate-400 font-bold uppercase tracking-widest text-[9px]">Base Valuation</span>
+                  <span className="font-black text-white">{formatCurrency(total)}</span>
+                </div>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-slate-400 font-bold uppercase tracking-widest text-[9px]">Logistics Fee</span>
+                  <span className="font-black text-emerald-400 uppercase tracking-widest text-[10px]">REMITTED</span>
+                </div>
+                <div className="pt-4 border-t border-white/5 flex justify-between items-center">
+                  <span className="text-white font-black uppercase tracking-widest text-[10px]">Payable Outlay</span>
+                  <span className="text-2xl font-black text-indigo-400 tracking-tighter">{formatCurrency(total)}</span>
+                </div>
+              </div>
+
+              <ErrorMessage message={error} />
+              
+              <button
+                type="button"
+                className="btn-elite w-full py-5 text-[10px] tracking-[0.2em] shadow-[0_0_30px_rgba(79,70,229,0.4)]"
+                onClick={handlePayment}
+                disabled={loading}
+              >
+                {loading ? 'TRANSMITTING...' : 'AUTHORIZE ACQUISITION'}
+              </button>
+
+              <p className="mt-6 text-[9px] text-center font-black text-slate-600 uppercase tracking-widest opacity-60">
+                🔒 Institutional Grade Encryption
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
   );
 }
+

@@ -25,16 +25,16 @@ export default function Navbar() {
   };
 
   return (
-    <header className="fixed top-8 left-1/2 -translate-x-1/2 z-50 w-[92%] max-w-6xl animate-van-reveal">
-      <nav className="glass-vanguard rounded-full px-8 py-3 flex items-center justify-between border border-white/5 shadow-2xl backdrop-blur-3xl filter saturate-150">
+    <header className="fixed top-8 left-1/2 -translate-x-1/2 z-50 w-[94%] max-w-6xl animate-elite-reveal">
+      <nav className="bg-slate-950/80 backdrop-blur-2xl rounded-3xl px-8 py-4 flex items-center justify-between border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
         {/* Brand Terminal */}
         <Link to="/" className="group flex items-center gap-4 transition-all hover:scale-105">
           <div className="h-10 w-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-black text-sm shadow-[0_0_20px_rgba(79,70,229,0.3)] group-hover:rotate-12 transition-transform">
-            V
+            SM
           </div>
           <div className="hidden lg:block">
             <span className="text-xs font-black tracking-[0.3em] text-white uppercase italic">Student Marketplace</span>
-            <span className="block text-[8px] font-black tracking-[0.4em] text-indigo-400 uppercase -mt-0.5">Vanguard Engine</span>
+            <span className="block text-[8px] font-black tracking-[0.4em] text-indigo-400 uppercase -mt-0.5">Elite Commerce Terminal</span>
           </div>
         </Link>
 
@@ -67,7 +67,7 @@ export default function Navbar() {
                 <Link
                   to="/admin"
                   onMouseEnter={() => Promise.allSettled([preloadAdminDashboardPage(), preloadAddProductPage()])}
-                  className="hidden sm:flex btn-vanguard px-6 py-2.5 text-[9px] tracking-[0.2em]"
+                  className="hidden sm:flex btn-elite px-6 py-2.5 text-[9px] tracking-[0.2em]"
                 >
                   Workspace
                 </Link>
@@ -111,7 +111,7 @@ export default function Navbar() {
             <Link
               to="/login"
               onMouseEnter={preloadAuthPage}
-              className="btn-vanguard px-6 py-2.5 text-[9px] tracking-[0.2em]"
+              className="btn-elite px-6 py-2.5 text-[9px] tracking-[0.2em]"
             >
               Initialize Identity
             </Link>

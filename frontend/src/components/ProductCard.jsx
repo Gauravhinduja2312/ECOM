@@ -36,7 +36,7 @@ export default function ProductCard({ product, onAdd }) {
   }, [product]);
 
   return (
-    <article className="group animate-fade-in-up glass-panel soft-ring rounded-2xl p-4 transition hover:-translate-y-1 hover:shadow-lg hover-glow">
+    <article className="group animate-elite-reveal glass-elite rounded-3xl p-6 transition-all duration-500 hover:-translate-y-2 hover:shadow-[0_40px_80px_-20px_rgba(0,0,0,0.6)]">
       <div className="relative overflow-hidden rounded-xl">
         <img
           src={imageSrc}
@@ -62,38 +62,38 @@ export default function ProductCard({ product, onAdd }) {
           </span>
         )}
       </div>
-      <div className="mt-3 space-y-2">
-        <h3 className="line-clamp-1 text-lg font-black tracking-tight text-slate-900">{product.name}</h3>
-        <p className="line-clamp-2 text-sm text-slate-600">{product.description}</p>
+      <div className="mt-6 space-y-4">
+        <h3 className="line-clamp-1 text-2xl font-black tracking-tighter text-white uppercase">{product.name}</h3>
+        <p className="line-clamp-2 text-sm font-medium text-slate-400 leading-relaxed">{product.description}</p>
         
         {/* Rating Display */}
-        <div className="flex items-center gap-2 py-1">
+        <div className="flex items-center gap-3 py-1">
           <StarRating rating={averageRating} size="sm" />
-          <span className="text-xs text-slate-600">
-            {averageRating > 0 ? `${totalReviews} review${totalReviews === 1 ? '' : 's'}` : 'No reviews'}
+          <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+            {averageRating > 0 ? `${totalReviews} LOGS` : 'ZERO LOGS'}
           </span>
         </div>
 
-        <p className="inline-flex items-center gap-1 text-base font-bold text-indigo-700">
-          <span>💸</span>
+        <p className="inline-flex items-center gap-2 text-xl font-black text-indigo-400 uppercase tracking-tighter">
+          <span>🏷️</span>
           {formatCurrency(product.price)}
         </p>
-        <p className="text-xs font-medium text-slate-500">Stock: {product.stock}</p>
+        <p className="text-[10px] font-bold text-slate-600 uppercase tracking-[0.2em]">Quantity: {product.stock}</p>
       </div>
-      <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+      <div className="mt-8 flex flex-col gap-3 sm:flex-row">
         <Link
           to={`/products/${product.id}`}
-          className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-center text-sm font-semibold text-slate-800 transition hover:border-slate-400 hover:bg-slate-100"
+          className="flex-1 rounded-xl border border-white/5 bg-white/5 px-4 py-3 text-center text-[10px] font-black uppercase tracking-widest text-white transition hover:bg-white/10"
         >
-          View Details
+          Details
         </Link>
         <button
           type="button"
-          className="btn-gradient rounded-lg px-3 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:bg-slate-400 disabled:text-white disabled:shadow-none"
+          className="btn-elite flex-2 px-6 py-3 text-[10px] tracking-widest disabled:opacity-30 disabled:cursor-not-allowed"
           onClick={() => onAdd(product.id)}
           disabled={!inStock}
         >
-          {inStock ? 'Add to Cart' : 'Out of Stock'}
+          {inStock ? 'Acquire' : 'Depleted'}
         </button>
       </div>
     </article>

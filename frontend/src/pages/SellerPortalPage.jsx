@@ -3,7 +3,7 @@ import { useAuth } from '../services/AuthContext';
 import { supabase } from '../services/supabaseClient';
 import { uploadProductImage } from '../utils/storage';
 import { apiRequest } from '../services/api';
-import SuccessMessage from '../components/SuccessMessage';
+import { useToast } from '../services/ToastContext';
 import ErrorMessage from '../components/ErrorMessage';
 import { formatCurrency } from '../utils/format';
 import Loader from '../components/Loader';
@@ -19,6 +19,7 @@ const initialForm = {
 
 export default function SellerPortalPage() {
   const { profile, session } = useAuth();
+  const { addToast } = useToast();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [form, setForm] = useState(initialForm);
   const [editingId, setEditingId] = useState(null);
@@ -26,7 +27,6 @@ export default function SellerPortalPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   
   const [payoutDetails, setPayoutDetails] = useState({ upi_id: '' });
@@ -82,6 +82,7 @@ export default function SellerPortalPage() {
     try {
       const url = await uploadProductImage(file);
       onChange('image_url', url);
+      addToast('Visual evidence acquired.', 'info');
     } catch (err) {
       setErrorMessage('Upload failed.');
     } finally {
@@ -110,12 +111,12 @@ export default function SellerPortalPage() {
           .eq('id', editingId)
           .eq('seller_id', profile.id);
         if (error) throw error;
-        setSuccessMessage('Pitch updated successfully! ✨');
+        addToast('Acquisition pitch baseline updated. ✨', 'success');
       } else {
         await apiRequest('/api/products/store/offer', 'POST', session.access_token, {
           listingDraft: payload,
         });
-        setSuccessMessage('Product pitched to Campus Store! Awaiting review. 🎉');
+        addToast('Product pitched to Campus Store. 🎉', 'success');
       }
 
       setForm(initialForm);
@@ -132,7 +133,7 @@ export default function SellerPortalPage() {
   const handleOfferResponse = async (id, decision) => {
     try {
       await apiRequest(`/api/products/${id}/offer-response`, 'POST', session.access_token, { decision });
-      setSuccessMessage(decision === 'accept' ? 'Offer accepted! We will contact you for pickup.' : 'Offer rejected.');
+      addToast(decision === 'accept' ? 'Offer accepted. Pickup protocol initialized.' : 'Offer rejected.', 'success');
       fetchData();
     } catch (err) {
       setErrorMessage('Failed to respond to offer.');
@@ -153,11 +154,11 @@ export default function SellerPortalPage() {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this pitch?')) return;
+    if (!window.confirm('Are you sure you want to terminate this pitch?')) return;
     try {
       const { error } = await supabase.from('products').delete().eq('id', id).eq('seller_id', profile.id);
       if (error) throw error;
-      setSuccessMessage('Pitch deleted.');
+      addToast('Pitch terminated.', 'info');
       fetchData();
     } catch (err) {
       setErrorMessage('Failed to delete pitch.');
@@ -173,7 +174,7 @@ export default function SellerPortalPage() {
         .update({ upi_id: payoutDetails.upi_id.trim() })
         .eq('id', profile.id);
       if (error) throw error;
-      setSuccessMessage('Payment settings updated.');
+      addToast('Payment settings adjusted.', 'success');
     } catch (err) {
       setErrorMessage('Failed to save settings.');
     } finally {
@@ -184,117 +185,136 @@ export default function SellerPortalPage() {
   if (loading) return <Loader text="Entering Seller Portal..." />;
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-10 animate-fade-in-up">
-      <header className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
+    <div className="bg-[#020617] min-h-screen pt-64 pb-20 stagger-elite text-white">
+      <div className="mx-auto max-w-6xl px-6">
+      <header className="mb-20 flex flex-col md:flex-row md:items-end justify-between gap-8">
         <div>
-          <h1 className="page-title flex items-center gap-2">
-            <span className="icon-pill">💼</span>
-            Seller Portal
+          <h1 className="text-4xl font-black tracking-tight text-white uppercase inline-flex items-center gap-4">
+            <span className="h-12 w-12 rounded-2xl bg-indigo-600 flex items-center justify-center text-xl shadow-[0_0_30px_rgba(79,70,229,0.3)]">💼</span>
+            Seller Terminal
           </h1>
-          <p className="text-slate-600 mt-2">Manage your student-to-store inventory pitches and earnings.</p>
+          <p className="text-slate-500 mt-2 text-[10px] font-black uppercase tracking-[0.25em]">Acquisition Pitch Management</p>
         </div>
-        <div className="flex gap-2">
-            <button onClick={() => setActiveTab('dashboard')} className={`px-4 py-2 rounded-lg text-sm font-bold transition ${activeTab === 'dashboard' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'bg-white text-slate-600 hover:bg-slate-50'}`}>Dashboard</button>
-            <button onClick={() => { setActiveTab('submit'); setEditingId(null); setForm(initialForm); }} className={`px-4 py-2 rounded-lg text-sm font-bold transition ${activeTab === 'submit' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'bg-white text-slate-600 hover:bg-slate-50'}`}>+ New Pitch</button>
-            <button onClick={() => setActiveTab('settings')} className={`px-4 py-2 rounded-lg text-sm font-bold transition ${activeTab === 'settings' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'bg-white text-slate-600 hover:bg-slate-50'}`}>Settings</button>
+        <div className="flex gap-3">
+          {[
+            { id: 'dashboard', label: 'Monitor', icon: '📊' },
+            { id: 'submit', label: 'New Pitch', icon: '➕' },
+            { id: 'settings', label: 'Protocol', icon: '⚙️' },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => {
+                setActiveTab(tab.id);
+                if (tab.id === 'submit') {
+                  setEditingId(null);
+                  setForm(initialForm);
+                }
+              }}
+              className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                activeTab === tab.id
+                  ? 'bg-indigo-600 text-white shadow-[0_0_20px_rgba(79,70,229,0.4)]'
+                  : 'bg-white/5 text-slate-500 hover:text-white hover:bg-white/10'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
       </header>
 
-      <SuccessMessage message={successMessage} />
       <ErrorMessage message={errorMessage} />
 
       {activeTab === 'dashboard' && (
         <div className="space-y-8 stagger-children">
-          {/* Stats Grid */}
-          <div className="grid gap-4 sm:grid-cols-3">
-            <div className="glass-panel soft-ring rounded-2xl p-6">
-              <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Awaiting Review</p>
-              <p className="mt-2 text-3xl font-black text-slate-900">{stats.pendingCount}</p>
+          <div className="grid gap-6 sm:grid-cols-3">
+            <div className="glass-elite p-8 rounded-3xl">
+              <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Awaiting Review</p>
+              <p className="mt-2 text-4xl font-black text-white tracking-tighter">{stats.pendingCount}</p>
             </div>
-            <div className="glass-panel soft-ring rounded-2xl p-6">
-              <p className="text-xs font-bold text-violet-500 uppercase tracking-widest">Accepted Deals</p>
-              <p className="mt-2 text-3xl font-black text-slate-900">{stats.acceptedCount}</p>
+            <div className="glass-elite p-8 rounded-3xl">
+              <p className="text-[10px] font-black text-violet-400 uppercase tracking-widest">Accepted Deals</p>
+              <p className="mt-2 text-4xl font-black text-white tracking-tighter">{stats.acceptedCount}</p>
             </div>
-            <div className="glass-panel soft-ring rounded-2xl p-6 bg-gradient-to-br from-indigo-50 to-white">
-              <p className="text-xs font-bold text-indigo-600 uppercase tracking-widest">Total Earned Value</p>
-              <p className="mt-2 text-3xl font-black text-indigo-700">{formatCurrency(stats.totalEarnings)}</p>
+            <div className="glass-elite p-8 rounded-3xl bg-indigo-600/10">
+              <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Total Earned Value</p>
+              <p className="mt-2 text-4xl font-black text-white tracking-tighter">{formatCurrency(stats.totalEarnings)}</p>
             </div>
           </div>
 
           {/* Active Pitches List */}
-          <div className="glass-panel soft-ring rounded-3xl overflow-hidden border border-slate-200">
-            <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
-              <h2 className="font-bold text-slate-900">Your Product Pitches</h2>
-              <span className="text-xs text-slate-500 font-medium">{myPitches.length} Total</span>
+          <div className="glass-elite rounded-[2.5rem] overflow-hidden">
+            <div className="px-8 py-5 border-b border-white/5 bg-white/5 flex justify-between items-center">
+              <h2 className="text-[10px] font-black uppercase tracking-widest text-white">Active Product Pitches</h2>
+              <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">{myPitches.length} Total</span>
             </div>
-            <div className="divide-y divide-slate-100 bg-white">
+            <div className="divide-y divide-white/5">
               {myPitches.length > 0 ? myPitches.map(pitch => (
-                <div key={pitch.id} className="p-6 transition hover:bg-indigo-50/30">
-                  <div className="flex flex-wrap items-start justify-between gap-4">
-                    <div className="flex gap-4">
-                        <div className="h-16 w-16 rounded-xl bg-slate-100 flex-shrink-0 overflow-hidden border border-slate-200">
-                            {pitch.image_url ? <img src={pitch.image_url} alt="" className="h-full w-full object-cover" /> : <div className="h-full w-full flex items-center justify-center text-2xl">📦</div>}
+                <div key={pitch.id} className="p-8 transition hover:bg-white/5">
+                  <div className="flex flex-wrap items-start justify-between gap-6">
+                    <div className="flex gap-6">
+                        <div className="h-20 w-20 rounded-2xl bg-white/5 flex-shrink-0 overflow-hidden border border-white/5">
+                            {pitch.image_url ? <img src={pitch.image_url} alt="" className="h-full w-full object-cover" /> : <div className="h-full w-full flex items-center justify-center text-3xl opacity-20">📦</div>}
                         </div>
                         <div>
-                            <h3 className="font-bold text-slate-900">{pitch.name}</h3>
-                            <p className="text-sm text-slate-500 line-clamp-1">{pitch.description}</p>
-                            <div className="mt-2 flex flex-wrap gap-2">
-                                <span className="px-2 py-0.5 rounded-md bg-slate-100 text-[10px] font-bold text-slate-600 uppercase">{pitch.category}</span>
-                                <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase ${
-                                    pitch.verification_status === 'pending' ? 'bg-amber-100 text-amber-700' :
-                                    pitch.verification_status === 'verified' ? 'bg-emerald-100 text-emerald-700' :
-                                    'bg-rose-100 text-rose-700'
+                            <h3 className="text-xl font-black text-white uppercase tracking-tighter">{pitch.name}</h3>
+                            <p className="text-sm text-slate-500 mt-1 line-clamp-1">{pitch.description}</p>
+                            <div className="mt-4 flex flex-wrap gap-2">
+                                <span className="px-2 py-0.5 rounded bg-white/5 text-[9px] font-black text-slate-400 uppercase tracking-widest">{pitch.category}</span>
+                                <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest ${
+                                    pitch.verification_status === 'pending' ? 'bg-amber-500/10 text-amber-500' :
+                                    pitch.verification_status === 'verified' ? 'bg-emerald-500/10 text-emerald-500' :
+                                    'bg-rose-500/10 text-rose-500'
                                 }`}>{pitch.verification_status}</span>
                             </div>
                         </div>
                     </div>
                     <div className="text-right">
-                        <p className="text-lg font-black text-slate-900">{formatCurrency(pitch.price)}</p>
-                        <p className="text-xs font-bold text-slate-500 mt-1 uppercase">Asking Price</p>
+                        <p className="text-2xl font-black text-white tracking-tighter">{formatCurrency(pitch.price)}</p>
+                        <p className="text-[10px] font-black text-slate-500 mt-2 uppercase tracking-widest">Base Assessment</p>
                     </div>
                   </div>
 
                   {pitch.price_offer_status === 'pending_student_response' && (
-                    <div className="mt-6 p-4 rounded-2xl bg-indigo-50 border border-indigo-100 flex flex-col sm:flex-row items-center justify-between gap-4 animate-pulse">
+                    <div className="mt-8 p-6 rounded-[1.5rem] bg-indigo-600/10 border border-indigo-500/20 flex flex-col sm:flex-row items-center justify-between gap-6 animate-pulse">
                         <div>
-                            <p className="text-sm font-bold text-indigo-900">Admin Response: Counter Offer Received</p>
-                            <p className="text-base font-black text-indigo-700">The store offered to buy this for {formatCurrency(pitch.proposed_price)}</p>
+                            <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-1">Administrative Buyout Offer Received</p>
+                            <p className="text-xl font-black text-white uppercase tracking-tighter">Acquisition Offer: {formatCurrency(pitch.proposed_price)}</p>
                         </div>
-                        <div className="flex gap-2 w-full sm:w-auto">
-                            <button onClick={() => handleOfferResponse(pitch.id, 'accept')} className="flex-1 sm:flex-none btn-gradient px-4 py-2 text-xs">Accept & Sell</button>
-                            <button onClick={() => handleOfferResponse(pitch.id, 'reject')} className="flex-1 sm:flex-none btn-gradient-secondary px-4 py-2 text-xs">Decline</button>
+                        <div className="flex gap-3 w-full sm:w-auto">
+                            <button onClick={() => handleOfferResponse(pitch.id, 'accept')} className="flex-1 sm:flex-none btn-elite px-6 py-3 text-[10px]">ACCEPT OFFER</button>
+                            <button onClick={() => handleOfferResponse(pitch.id, 'reject')} className="flex-1 sm:flex-none px-6 py-3 bg-white/5 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-white transition">DECLINE</button>
                         </div>
                     </div>
                   )}
 
                   {pitch.price_offer_status === 'accepted' && (
-                    <div className="mt-4 flex items-center gap-2 p-3 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-100">
-                        <span className="text-lg">✅</span>
-                        <p className="text-xs font-bold uppercase tracking-wide">Marketplace Acquisition finalized for {formatCurrency(pitch.price)}</p>
+                    <div className="mt-4 flex items-center gap-3 p-4 rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                        <span className="text-lg">✓</span>
+                        <p className="text-[10px] font-black uppercase tracking-widest">Marketplace Acquisition finalized for {formatCurrency(pitch.price)}</p>
                     </div>
                   )}
 
                   {/* Pitch Controls */}
-                  <div className="mt-6 flex justify-end gap-3 border-t border-slate-50 pt-4">
+                  <div className="mt-8 flex justify-end gap-6 border-t border-white/5 pt-6">
                     <button 
                       onClick={() => handleEdit(pitch)} 
                       disabled={pitch.verification_status !== 'pending'}
-                      className="text-xs font-bold text-slate-400 hover:text-indigo-600 disabled:opacity-30 disabled:cursor-not-allowed transition"
+                      className="text-[10px] font-black text-slate-500 hover:text-indigo-400 disabled:opacity-20 transition uppercase tracking-widest"
                     >
-                      ✏️ EDIT PITCH
+                      EDIT PITCH
                     </button>
                     <button 
                       onClick={() => handleDelete(pitch.id)}
-                      className="text-xs font-bold text-slate-400 hover:text-rose-600 transition"
+                      className="text-[10px] font-black text-slate-500 hover:text-rose-500 transition uppercase tracking-widest"
                     >
-                      🗑️ DELETE
+                      TERMINATE
                     </button>
                   </div>
                 </div>
               )) : (
-                <div className="py-20 text-center">
-                    <p className="text-slate-400 font-medium italic">No active pitches found.</p>
-                    <button onClick={() => setActiveTab('submit')} className="mt-4 text-indigo-600 font-bold hover:underline">Pitch your first item →</button>
+                <div className="py-24 text-center">
+                    <p className="text-slate-500 text-sm font-black uppercase tracking-[0.2em] italic">No active pitches detected.</p>
+                    <button onClick={() => setActiveTab('submit')} className="mt-4 text-indigo-400 text-[10px] font-black uppercase tracking-widest hover:text-white transition">Initialize first acquisition pitch →</button>
                 </div>
               )}
             </div>
@@ -303,65 +323,67 @@ export default function SellerPortalPage() {
       )}
 
       {activeTab === 'submit' && (
-        <div className="max-w-2xl mx-auto stagger-children">
-            <div className="glass-panel soft-ring rounded-3xl p-8 border border-slate-200">
-                <h2 className="text-2xl font-black text-slate-900 mb-6">{editingId ? 'Edit Your Pitch' : 'Pitch to Campus Store'}</h2>
+        <div className="max-w-2xl mx-auto stagger-elite">
+            <div className="glass-elite p-10 rounded-[2.5rem]">
+                <h2 className="text-3xl font-black text-white uppercase tracking-tighter mb-8">{editingId ? 'Modify Pitch Baseline' : 'Register Acquisition Pitch'}</h2>
                 <form onSubmit={handleSubmitOffer} className="space-y-6">
-                    <div className="form-group">
-                        <label className="form-label">Product Name</label>
-                        <input className="form-input" value={form.name} onChange={e => onChange('name', e.target.value)} required placeholder="e.g. Scientific Calculator" />
+                    <div>
+                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Asset Name</label>
+                        <input className="elite-input" value={form.name} onChange={e => onChange('name', e.target.value)} required placeholder="Scientific Identifier..." />
                     </div>
-                    <div className="form-group">
-                        <label className="form-label">Description & Condition</label>
-                        <textarea className="form-input min-h-24" value={form.description} onChange={e => onChange('description', e.target.value)} required placeholder="Describe condition, age, and any flaws..." />
+                    <div>
+                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Specifications & Status</label>
+                        <textarea className="elite-input min-h-32" value={form.description} onChange={e => onChange('description', e.target.value)} required placeholder="Document condition, age, and operational status..." />
                     </div>
                     <div className="grid gap-6 sm:grid-cols-2">
-                        <div className="form-group">
-                            <label className="form-label">Asking Price (₹)</label>
-                            <input type="number" className="form-input" value={form.price} onChange={e => onChange('price', e.target.value)} required placeholder="0.00" />
+                        <div>
+                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Valuation Baseline (₹)</label>
+                            <input type="number" className="elite-input" value={form.price} onChange={e => onChange('price', e.target.value)} required placeholder="0.00" />
                         </div>
-                        <div className="form-group">
-                            <label className="form-label">Category</label>
-                            <input className="form-input" value={form.category} onChange={e => onChange('category', e.target.value)} required placeholder="e.g. Books, Tech" />
+                        <div>
+                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Category Domain</label>
+                            <input className="elite-input" value={form.category} onChange={e => onChange('category', e.target.value)} required placeholder="Institutional Domain..." />
                         </div>
                     </div>
-                    <div className="form-group">
-                        <label className="form-label">Upload Evidence/Photo</label>
-                        <label className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-indigo-100 rounded-2xl bg-indigo-50/30 cursor-pointer hover:bg-indigo-50 transition">
+                    <div>
+                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Visual Evidence</label>
+                        <label className="elite-input flex flex-col items-center justify-center py-10 border-dashed border-white/10 hover:border-indigo-500/50 cursor-pointer group transition-all">
                             <input type="file" className="hidden" onChange={handleImageUpload} accept="image/*" />
-                            {uploading ? <p className="text-sm font-bold text-indigo-600 animate-pulse">Uploading...</p> : 
-                             form.image_url ? <p className="text-sm font-bold text-emerald-600">✓ Image ready</p> : 
-                             <p className="text-sm text-slate-500">Click to upload photo</p>}
+                            {uploading ? <p className="text-[10px] font-black text-indigo-400 animate-pulse uppercase tracking-widest">TRANSMITTING...</p> : 
+                             form.image_url ? <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">✓ EVIDENCE ACQUIRED</p> : 
+                             <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest group-hover:text-white transition">Acquire Visual Representation</p>}
                         </label>
                     </div>
-                    <button type="submit" disabled={saving || uploading} className="btn-gradient w-full py-4 text-lg">
-                        {saving ? 'Submitting...' : editingId ? 'Update Offer' : 'Send Pitch to Store'}
+                    <button type="submit" disabled={saving || uploading} className="btn-elite w-full py-5 text-[10px] tracking-[0.2em]">
+                        {saving ? 'TRANSMITTING...' : editingId ? 'UPDATE BASELINE' : 'EXECUTE PITCH REGISTRATION'}
                     </button>
-                    {editingId && <button type="button" onClick={() => { setEditingId(null); setActiveTab('dashboard'); }} className="w-full text-sm font-bold text-slate-500 hover:text-slate-700">Cancel Edit</button>}
+                    {editingId && <button type="button" onClick={() => { setEditingId(null); setActiveTab('dashboard'); }} className="w-full text-[10px] font-black text-slate-500 hover:text-white transition uppercase tracking-widest pt-4">ABORT UPDATE</button>}
                 </form>
             </div>
         </div>
       )}
 
       {activeTab === 'settings' && (
-        <div className="max-w-2xl mx-auto stagger-children">
-            <div className="glass-panel soft-ring rounded-3xl p-8 border border-slate-200">
-                <h2 className="text-2xl font-black text-slate-900 mb-2">Payment Settings</h2>
-                <p className="text-slate-600 mb-6 text-sm">Where should the store send your money after acquisition?</p>
+        <div className="max-w-2xl mx-auto stagger-elite">
+            <div className="glass-elite p-10 rounded-[2.5rem]">
+                <h2 className="text-3xl font-black text-white uppercase tracking-tighter mb-2">Protocol Settings</h2>
+                <p className="text-slate-500 mb-8 text-[10px] font-black uppercase tracking-widest">Revenue Liquidation Configuration</p>
                 
                 <form onSubmit={handleSavePayout} className="space-y-6">
-                    <div className="form-group">
-                        <label className="form-label">UPI ID</label>
-                        <input className="form-input" value={payoutDetails.upi_id} onChange={e => setPayoutDetails({ upi_id: e.target.value })} required placeholder="yourname@bank" />
-                        <p className="text-[10px] text-slate-500 mt-1 uppercase font-bold tracking-widest italic">Verification via test transaction may apply.</p>
+                    <div>
+                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Institutional UPI ID</label>
+                        <input className="elite-input" value={payoutDetails.upi_id} onChange={e => setPayoutDetails({ upi_id: e.target.value })} required placeholder="identifier@node" />
+                        <p className="text-[9px] text-slate-600 mt-3 font-black uppercase tracking-widest italic opacity-60">Verification via micro-transaction protocols may apply.</p>
                     </div>
-                    <button type="submit" disabled={savingPayout} className="btn-gradient px-8 py-3">
-                        {savingPayout ? 'Saving...' : 'Update Payment Details'}
+                    <button type="submit" disabled={savingPayout} className="btn-elite px-10 py-5 text-[10px] tracking-[0.2em]">
+                        {savingPayout ? 'SYNCHRONIZING...' : 'UPDATE DISBURSEMENT PROTOCOL'}
                     </button>
                 </form>
             </div>
         </div>
       )}
+      </div>
     </div>
   );
 }
+

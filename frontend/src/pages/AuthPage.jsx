@@ -3,6 +3,7 @@ import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import ErrorMessage from '../components/ErrorMessage';
 import { useAuth } from '../services/AuthContext';
 import Loader from '../components/Loader';
+import { useToast } from '../services/ToastContext';
 
 function getPasswordChecks(password) {
   return {
@@ -18,14 +19,8 @@ function getPasswordChecks(password) {
 function getPasswordStrengthLabel(passwordChecks) {
   const score = Object.values(passwordChecks).filter(Boolean).length;
 
-  if (score <= 2) {
-    return 'Weak';
-  }
-
-  if (score <= 4) {
-    return 'Medium';
-  }
-
+  if (score <= 2) return 'Weak';
+  if (score <= 4) return 'Medium';
   return 'Strong';
 }
 
@@ -44,10 +39,7 @@ async function fetchPwnedCount(password) {
   const suffix = hash.slice(5);
 
   const response = await fetch(`https://api.pwnedpasswords.com/range/${prefix}`);
-
-  if (!response.ok) {
-    throw new Error('Unable to verify password safety right now');
-  }
+  if (!response.ok) throw new Error('Unable to verify password safety right now');
 
   const body = await response.text();
   const match = body
@@ -55,10 +47,7 @@ async function fetchPwnedCount(password) {
     .map((line) => line.trim())
     .find((line) => line.startsWith(`${suffix}:`));
 
-  if (!match) {
-    return 0;
-  }
-
+  if (!match) return 0;
   const count = Number(match.split(':')[1] || 0);
   return Number.isNaN(count) ? 0 : count;
 }
@@ -67,6 +56,7 @@ export default function AuthPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const { session, profile, loading: authLoading, signIn, signUp } = useAuth();
+  const { addToast } = useToast();
   const [isSignup, setIsSignup] = useState(location.pathname === '/signup');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -86,12 +76,7 @@ export default function AuthPage() {
   const passwordStrength = getPasswordStrengthLabel(passwordChecks);
 
   useEffect(() => {
-    if (location.pathname === '/signup') {
-      setIsSignup(true);
-      return;
-    }
-
-    setIsSignup(false);
+    setIsSignup(location.pathname === '/signup');
   }, [location.pathname]);
 
   useEffect(() => {
@@ -99,14 +84,7 @@ export default function AuthPage() {
     let timeoutId;
 
     const checkBreach = async () => {
-      if (!isSignup || !password) {
-        setBreachCount(0);
-        setBreachError('');
-        setBreachChecking(false);
-        return;
-      }
-
-      if (!isPasswordValid) {
+      if (!isSignup || !password || !isPasswordValid) {
         setBreachCount(0);
         setBreachError('');
         setBreachChecking(false);
@@ -118,36 +96,26 @@ export default function AuthPage() {
 
       try {
         const count = await fetchPwnedCount(password);
-        if (!cancelled) {
-          setBreachCount(count);
-        }
+        if (!cancelled) setBreachCount(count);
       } catch (checkError) {
         if (!cancelled) {
           setBreachError(checkError.message || 'Password safety check failed');
           setBreachCount(0);
         }
       } finally {
-        if (!cancelled) {
-          setBreachChecking(false);
-        }
+        if (!cancelled) setBreachChecking(false);
       }
     };
 
     timeoutId = window.setTimeout(checkBreach, 450);
-
     return () => {
       cancelled = true;
       window.clearTimeout(timeoutId);
     };
   }, [isSignup, password, isPasswordValid]);
 
-  if (authLoading || (session && !profile)) {
-    return <Loader text="Checking authentication..." />;
-  }
-
-  if (session && profile) {
-    return <Navigate to={profile.role === 'admin' ? '/admin' : '/select-role'} replace />;
-  }
+  if (authLoading || (session && !profile)) return <Loader text="Synchronizing Identity Domain..." />;
+  if (session && profile) return <Navigate to={profile.role === 'admin' ? '/admin' : '/select-role'} replace />;
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -155,28 +123,27 @@ export default function AuthPage() {
 
     if (isSignup) {
       if (!isPasswordValid) {
-        setError('Password does not meet the required security rules.');
+        setError('Password does not meet the technical requirements.');
         return;
       }
-
       if (password !== confirmPassword) {
-        setError('Password and confirm password do not match.');
+        setError('Password verification failed (no mismatch allowed).');
         return;
       }
-
       if (breachCount > 0) {
-        setError('This password appears in known breaches. Please choose a different password.');
+        setError('Password hash detected in known breaches. Protocol violation.');
         return;
       }
     }
 
     setLoading(true);
-
     try {
       if (isSignup) {
         await signUp(email, password, { fullName, phone });
+        addToast('Identity successfully registered.', 'success');
       } else {
         await signIn(email, password);
+        addToast('Identity authenticated. Terminal access granted.', 'success');
       }
     } catch (submitError) {
       setError(submitError.message);
@@ -186,163 +153,172 @@ export default function AuthPage() {
   };
 
   return (
-    <section className="mx-auto max-w-md px-4 py-16 animate-fade-in-up">
-      <div className="overflow-hidden rounded-2xl border border-indigo-100 bg-gradient-to-br from-white to-indigo-50/30 p-6 shadow-xl shadow-indigo-200/40 hover-glow">
-        {/* Header */}
-        <div className="mb-6">
-          <p className="inline-flex items-center gap-2">
-            <span className="icon-pill">🔑</span>
-            <span className="text-xs font-semibold uppercase tracking-wider text-indigo-600">Secure Access</span>
-          </p>
-          <h1 className="mt-2 text-2xl font-black tracking-tight text-slate-900">{isSignup ? 'Create Account' : 'Welcome Back'}</h1>
-          <p className="mt-2 text-sm text-slate-600">{isSignup ? 'Join our community today' : 'Sign in to continue shopping'}</p>
-          <p className="mt-1 text-xs font-medium text-indigo-700">Only @ves.ac.in email IDs are allowed (except configured admin email).</p>
-        </div>
+    <div className="bg-[#020617] min-h-screen pt-64 pb-20 flex flex-col items-center justify-center px-4">
+      {/* Background Ambience */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-1/4 left-1/4 h-[500px] w-[500px] rounded-full bg-indigo-600/10 blur-[120px] animate-pulse"></div>
+        <div className="absolute bottom-1/4 right-1/4 h-[500px] w-[500px] rounded-full bg-purple-600/10 blur-[120px] animate-pulse" style={{ animationDelay: '2s' }}></div>
+      </div>
 
-        {/* Form */}
-        <form className="space-y-4" onSubmit={handleSubmit}>
-          {isSignup && (
-            <>
-              <div className="form-group">
-                <label className="form-label">👤 Full Name</label>
-                <input
-                  type="text"
-                  required
-                  className="form-input"
-                  placeholder="Your full name"
-                  value={fullName}
-                  onChange={(event) => setFullName(event.target.value)}
-                />
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">📱 Phone</label>
-                <input
-                  type="tel"
-                  className="form-input"
-                  placeholder="10-digit phone number"
-                  value={phone}
-                  onChange={(event) => setPhone(event.target.value)}
-                />
-              </div>
-            </>
-          )}
-
-          <div className="form-group">
-            <label className="form-label">📧 Email Address</label>
-            <input
-              type="email"
-              required
-              className="form-input"
-              placeholder="you@ves.ac.in"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-            />
+      <section className="relative z-10 w-full max-w-xl animate-elite-reveal">
+        <div className="glass-card p-10 md:p-16">
+          {/* Header */}
+          <div className="mb-12 text-center">
+            <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-600/20 text-indigo-400 text-3xl mb-6 shadow-[0_0_30px_rgba(79,70,229,0.2)]">
+              {isSignup ? '🧬' : '🔐'}
+            </div>
+            <h1 className="text-4xl md:text-5xl font-black tracking-tight text-white uppercase mb-4">
+              {isSignup ? 'Initialize Account' : 'Identity Verification'}
+            </h1>
+            <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.25em]">
+              {isSignup ? 'Establish your presence in the ecosystem' : 'Access the student commerce terminal'}
+            </p>
+            <div className="mt-8 p-3 rounded-xl bg-white/5 border border-white/5 text-[9px] font-black text-indigo-400 uppercase tracking-widest italic">
+              Restricted Domain: @ves.ac.in credentials only
+            </div>
           </div>
 
-          <div className="form-group">
-            <label className="form-label">🔐 Password</label>
-            <div className="relative">
-              <input
-                type={showPassword ? 'text' : 'password'}
-                required
-                minLength={10}
-                className="form-input pr-24"
-                placeholder="Create a strong password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-              />
-              <button
-                type="button"
-                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-600"
-                onClick={() => setShowPassword((prev) => !prev)}
-              >
-                {showPassword ? 'Hide' : 'Show'}
-              </button>
-            </div>
+          {/* Form */}
+          <form className="space-y-6" onSubmit={handleSubmit}>
             {isSignup && (
-              <div className="mt-2 rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700">
-                <p className="font-semibold text-slate-900">Password strength: {passwordStrength}</p>
-                <ul className="mt-2 space-y-1">
-                  <li className={passwordChecks.minLength ? 'text-emerald-700' : 'text-slate-600'}>At least 10 characters</li>
-                  <li className={passwordChecks.lowercase ? 'text-emerald-700' : 'text-slate-600'}>At least 1 lowercase letter</li>
-                  <li className={passwordChecks.uppercase ? 'text-emerald-700' : 'text-slate-600'}>At least 1 uppercase letter</li>
-                  <li className={passwordChecks.number ? 'text-emerald-700' : 'text-slate-600'}>At least 1 number</li>
-                  <li className={passwordChecks.specialChar ? 'text-emerald-700' : 'text-slate-600'}>At least 1 special character</li>
-                  <li className={passwordChecks.noSpaces ? 'text-emerald-700' : 'text-slate-600'}>No spaces</li>
-                </ul>
-                {breachChecking && (
-                  <p className="mt-2 text-slate-600">Checking breach database...</p>
-                )}
-                {!breachChecking && breachCount > 0 && (
-                  <p className="mt-2 font-semibold text-rose-700">This password appears in known breaches ({breachCount} times).</p>
-                )}
-                {!breachChecking && !breachError && password && isPasswordValid && breachCount === 0 && (
-                  <p className="mt-2 font-semibold text-emerald-700">No breach exposure found for this password hash.</p>
-                )}
-                {!breachChecking && breachError && (
-                  <p className="mt-2 text-amber-700">{breachError}</p>
-                )}
+              <div className="grid gap-6 md:grid-cols-2">
+                <div>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Full Name</label>
+                  <input
+                    type="text"
+                    required
+                    className="elite-input"
+                    placeholder="Full Identification"
+                    value={fullName}
+                    onChange={(event) => setFullName(event.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Mobile Node</label>
+                  <input
+                    type="tel"
+                    className="elite-input"
+                    placeholder="10-digit transmission ID"
+                    value={phone}
+                    onChange={(event) => setPhone(event.target.value)}
+                  />
+                </div>
               </div>
             )}
-          </div>
 
-          {isSignup && (
-            <div className="form-group">
-              <label className="form-label">🔐 Confirm Password</label>
+            <div>
+              <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Email Address</label>
+              <input
+                type="email"
+                required
+                className="elite-input"
+                placeholder="identifier@ves.ac.in"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+              />
+            </div>
+
+            <div>
+              <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Access Code</label>
               <div className="relative">
                 <input
-                  type={showConfirmPassword ? 'text' : 'password'}
+                  type={showPassword ? 'text' : 'password'}
                   required
                   minLength={10}
-                  className="form-input pr-24"
-                  placeholder="Re-enter your password"
-                  value={confirmPassword}
-                  onChange={(event) => setConfirmPassword(event.target.value)}
+                  className="elite-input pr-20"
+                  placeholder="Encryption sequence"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
                 />
                 <button
                   type="button"
-                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-600"
-                  onClick={() => setShowConfirmPassword((prev) => !prev)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-[9px] font-black text-slate-500 hover:text-white uppercase tracking-widest"
+                  onClick={() => setShowPassword((prev) => !prev)}
                 >
-                  {showConfirmPassword ? 'Hide' : 'Show'}
+                  {showPassword ? 'Hide' : 'Show'}
                 </button>
               </div>
+              
+              {isSignup && (
+                <div className="mt-4 p-5 rounded-2xl bg-white/5 border border-white/5">
+                  <div className="flex justify-between items-center mb-4">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Strength Baseline: <span className={`ml-2 ${passwordStrength === 'Strong' ? 'text-emerald-400' : 'text-amber-400'}`}>{passwordStrength}</span></p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-2">
+                    {[
+                      { key: 'minLength', label: '10+ Chars' },
+                      { key: 'lowercase', label: 'Lowercase' },
+                      { key: 'uppercase', label: 'Uppercase' },
+                      { key: 'number', label: 'Numerical' },
+                      { key: 'specialChar', label: 'Special' },
+                      { key: 'noSpaces', label: 'No Gaps' },
+                    ].map((check) => (
+                      <div key={check.key} className="flex items-center gap-2">
+                        <div className={`h-1.5 w-1.5 rounded-full ${passwordChecks[check.key] ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-white/10'}`}></div>
+                        <span className={`text-[9px] font-bold uppercase tracking-widest ${passwordChecks[check.key] ? 'text-white' : 'text-slate-600'}`}>
+                          {check.label}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  {breachChecking && <p className="mt-4 text-[9px] font-bold text-indigo-400 animate-pulse uppercase tracking-widest">Breach DB Synchronizing...</p>}
+                  {!breachChecking && breachCount > 0 && <p className="mt-4 text-[9px] font-black text-rose-500 uppercase tracking-widest">Protocol Violation: {breachCount} Known Breaches</p>}
+                </div>
+              )}
             </div>
-          )}
 
-          <ErrorMessage message={error} />
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="btn-gradient w-full rounded-lg px-4 py-2.5 font-medium uppercase tracking-wide disabled:opacity-75 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-          >
-            {loading ? (
-              <>
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-indigo-200"></div>
-                <span>Processing...</span>
-              </>
-            ) : (
-              isSignup ? 'Create Account' : 'Login'
+            {isSignup && (
+              <div>
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Verify Access Code</label>
+                <div className="relative">
+                  <input
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    required
+                    minLength={10}
+                    className="elite-input pr-20"
+                    placeholder="Repeat encryption sequence"
+                    value={confirmPassword}
+                    onChange={(event) => setConfirmPassword(event.target.value)}
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-[9px] font-black text-slate-500 hover:text-white uppercase tracking-widest"
+                    onClick={() => setShowConfirmPassword((prev) => !prev)}
+                  >
+                    {showConfirmPassword ? 'Hide' : 'Show'}
+                  </button>
+                </div>
+              </div>
             )}
-          </button>
-        </form>
 
-        {/* Toggle Auth Mode */}
-        <div className="mt-6 border-t border-slate-200 pt-6">
-          <button
-            type="button"
-            className="inline-flex items-center gap-2 text-sm font-medium text-indigo-600 transition hover:text-indigo-700 hover:underline underline-offset-4"
-            onClick={() => navigate(isSignup ? '/login' : '/signup')}
-          >
-            {isSignup ? '← Already have an account? Login' : '→ New user? Create account'}
-          </button>
+            <ErrorMessage message={error} />
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="btn-elite w-full py-5 text-[10px] tracking-[0.25em]"
+            >
+              {loading ? 'Transmitting Data...' : isSignup ? 'EXECUTE REGISTRATION' : 'AUTHENTICATE IDENTITY'}
+            </button>
+          </form>
+
+          {/* Toggle Mode */}
+          <div className="mt-12 pt-8 border-t border-white/5 text-center">
+            <button
+              type="button"
+              className="text-[10px] font-black text-slate-500 hover:text-white transition uppercase tracking-[0.2em]"
+              onClick={() => navigate(isSignup ? '/login' : '/signup')}
+            >
+              {isSignup ? '← Return to verification portal' : '→ Initialize new identity node'}
+            </button>
+          </div>
         </div>
-      </div>
-
-      {/* Social Proof Text */}
-      <p className="mt-6 text-center text-xs text-slate-500">🔒 Your data is encrypted and secure</p>
-    </section>
+        
+        <p className="mt-8 text-center text-[9px] font-black text-slate-600 uppercase tracking-widest opacity-50">
+          🔐 Encrypted Transmission Protocol v3.04
+        </p>
+      </section>
+    </div>
   );
 }
+

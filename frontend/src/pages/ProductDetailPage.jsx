@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import Loader from '../components/Loader';
 import ErrorMessage from '../components/ErrorMessage';
 import StarRating from '../components/StarRating';
@@ -12,11 +12,14 @@ import { apiRequest } from '../services/api';
 import { supabase } from '../services/supabaseClient';
 import { formatCurrency } from '../utils/format';
 import { getProductDisplayImage, getProductFallbackImage } from '../utils/productImage';
+import { useToast } from '../services/ToastContext';
 
 export default function ProductDetailPage() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { addToCart } = useCart();
   const { profile, session } = useAuth();
+  const { addToast } = useToast();
   const [product, setProduct] = useState(null);
   const [sellerDisplayName, setSellerDisplayName] = useState('');
   const [imageSrc, setImageSrc] = useState('');
@@ -25,6 +28,7 @@ export default function ProductDetailPage() {
   const [eligibleOrders, setEligibleOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [addingToCart, setAddingToCart] = useState(false);
 
   const loadReviews = async () => {
     try {
@@ -79,14 +83,7 @@ export default function ProductDetailPage() {
         try {
           const myOrders = await apiRequest('/api/payment/my-orders', 'GET', session.access_token);
           const reviewEligibleStatuses = new Set([
-            'order_placed',
-            'processing',
-            'ready_for_pickup',
-            'shipped',
-            'completed',
-            'paid',
-            'delivered',
-            'pending',
+            'order_placed', 'processing', 'ready_for_pickup', 'shipped', 'completed', 'paid', 'delivered', 'pending',
           ]);
           const completedOrdersForProduct = (myOrders.orders || []).filter((order) => (
             reviewEligibleStatuses.has(String(order.status || '').toLowerCase())
@@ -105,114 +102,152 @@ export default function ProductDetailPage() {
     fetchProduct();
   }, [id, profile?.role, session?.access_token]);
 
-  const handleReviewSubmitted = () => {
-    loadReviews();
+  const handleAddToCart = async () => {
+    if (!session) {
+      addToast('Personnel authorization required.', 'error');
+      navigate('/auth');
+      return;
+    }
+    
+    setAddingToCart(true);
+    try {
+      await addToCart(product.id);
+      addToast(`${product.name} synchronized with acquisition cart.`, 'success');
+    } catch (err) {
+      addToast(err.message || 'Synchronization failed.', 'error');
+    } finally {
+      setAddingToCart(false);
+    }
   };
 
-  if (loading) return <Loader text="Loading product details..." />;
-  if (error || !product) return <ErrorMessage message={error || 'Product not found'} />;
+  const handleReviewSubmitted = () => {
+    loadReviews();
+    addToast('Feedback transmission successful.', 'success');
+  };
+
+  if (loading) return <Loader text="Retrieving Asset Specs..." />;
+  if (error || !product) return (
+    <div className="bg-[#020617] min-h-screen pt-64 flex flex-col items-center">
+      <ErrorMessage message={error || 'Asset Not Found'} />
+      <button onClick={() => navigate('/products')} className="btn-elite mt-8 px-10 py-4 text-[10px]">RETURN TO INVENTORY</button>
+    </div>
+  );
 
   const inStock = Number(product.stock) > 0;
   const fallbackImage = getProductFallbackImage(product);
 
   return (
-    <section className="mx-auto max-w-6xl px-4 py-10 animate-fade-in-up">
-      {/* Product Main Section */}
-      <div className="grid gap-8 md:grid-cols-2 stagger-children">
-        {/* Image */}
-        <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <img
-            src={imageSrc}
-            alt={product.name}
-            className="h-96 w-full object-cover"
-            onError={() => {
-              if (imageSrc !== fallbackImage) {
-                setImageSrc(fallbackImage);
-              }
-            }}
-          />
-          <span
-            className={`absolute left-3 top-3 rounded-full px-3 py-1 text-xs font-semibold ${
-              inStock ? 'bg-emerald-500/90 text-white' : 'bg-rose-500/90 text-white'
-            }`}
-          >
-            {inStock ? `${product.stock} in stock` : 'Sold out'}
-          </span>
-        </div>
-
-        {/* Product Info */}
-        <div className="glass-panel soft-ring rounded-2xl p-6 hover-glow">
-          <p className="text-xs font-semibold uppercase tracking-wider text-indigo-600">Product Details</p>
-          <h1 className="mt-1 text-3xl font-black tracking-tight text-slate-900">{product.name}</h1>
-
-          {/* Rating Badge */}
-          <div className="mt-4 flex items-center gap-4">
-            <div>
-              <StarRating rating={ratingSummary.averageRating || 0} size="md" />
+    <div className="bg-[#020617] min-h-screen pt-64 pb-20 text-white">
+      <section className="mx-auto max-w-7xl px-6 stagger-elite">
+        {/* Core Product Display */}
+        <div className="grid gap-12 lg:grid-cols-2">
+          {/* Visual Domain */}
+          <div className="relative group">
+            <div className="glass-card overflow-hidden rounded-[2.5rem] bg-white/5 border border-white/10 aspect-square">
+              <img
+                src={imageSrc}
+                alt={product.name}
+                className="h-full w-full object-cover transition duration-700 group-hover:scale-105"
+                onError={() => {
+                  if (imageSrc !== fallbackImage) setImageSrc(fallbackImage);
+                }}
+              />
             </div>
-            <div className="text-sm text-slate-600">
-              <p className="font-semibold text-slate-900">{ratingSummary.averageRating || 0}/5</p>
-              <p className="text-xs">{ratingSummary.totalReviews || 0} review{ratingSummary.totalReviews === 1 ? '' : 's'}</p>
+            <div className={`absolute top-6 left-6 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg ${
+              inStock ? 'bg-emerald-600 text-white shadow-emerald-600/20' : 'bg-rose-600 text-white shadow-rose-600/20'
+            }`}>
+              {inStock ? `INSTOCK: ${product.stock} UNITS` : 'DOMAIN DEPLETED'}
             </div>
           </div>
 
-          <p className="mt-4 leading-relaxed text-slate-600">{product.description}</p>
-          
-          <p className="text-gradient mt-5 text-4xl font-black">{formatCurrency(product.price)}</p>
+          {/* Intel Domain */}
+          <div className="flex flex-col justify-center">
+            <div className="stagger-children space-y-8">
+              <div>
+                <p className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.4em] mb-4">Inventory ID: #{product.id}</p>
+                <h1 className="text-5xl font-black tracking-tight uppercase leading-none">{product.name}</h1>
+                
+                <div className="mt-8 flex items-center gap-6">
+                  <div className="flex items-center gap-2 bg-white/5 px-4 py-3 rounded-2xl border border-white/5">
+                    <StarRating rating={ratingSummary.averageRating || 0} size="sm" />
+                    <span className="text-xs font-black text-indigo-400 ml-2">{ratingSummary.averageRating || 0}</span>
+                  </div>
+                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{ratingSummary.totalReviews || 0} USER VERIFICATIONS</p>
+                </div>
+              </div>
 
-          <div className="mt-4 space-y-2 text-sm text-slate-600">
-            <p>
-              Category: <span className="font-semibold text-slate-800">{product.category || 'General'}</span>
-            </p>
-            {profile?.role === 'admin' && sellerDisplayName && (
-              <p>
-                Posted by: <span className="font-semibold text-slate-800">{sellerDisplayName}</span>
+              <p className="text-lg text-slate-400 font-medium leading-relaxed max-w-xl">
+                {product.description}
               </p>
-            )}
+
+              <div className="flex flex-col gap-2">
+                <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Acquisition Outlay</p>
+                <p className="text-5xl font-black tracking-tighter text-white">{formatCurrency(product.price)}</p>
+              </div>
+
+              <div className="pt-8 border-t border-white/5 flex flex-wrap items-center gap-4">
+                <button
+                  onClick={handleAddToCart}
+                  disabled={!inStock || addingToCart}
+                  className="btn-elite px-12 py-6 text-[11px] tracking-[0.25em] flex items-center gap-4 shadow-[0_0_40px_rgba(79,70,229,0.25)]"
+                >
+                  {addingToCart ? 'SYNCHRONIZING...' : inStock ? 'ADD TO ACQUISITION CART' : 'DOMAIN DEPLETED'}
+                </button>
+                
+                <div className="px-6 py-4 rounded-2xl bg-white/5 border border-white/5">
+                  <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Domain Class</p>
+                  <p className="text-xs font-black text-white uppercase tracking-widest">{product.category || 'GENERAL'}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Feedback Section */}
+        <div className="mt-32 space-y-16">
+          <div className="flex items-center gap-8">
+            <h2 className="text-3xl font-black uppercase tracking-tighter">Feedback Domain</h2>
+            <div className="h-px flex-1 bg-white/5"></div>
           </div>
 
-          <button
-            type="button"
-            onClick={() => addToCart(product.id)}
-            disabled={!inStock}
-            className="btn-gradient mt-6 inline-flex items-center gap-2 rounded-lg px-5 py-2.5 font-semibold disabled:cursor-not-allowed disabled:opacity-70"
-          >
-            <span>🛒</span>
-            {inStock ? 'Add to Cart' : 'Out of Stock'}
-          </button>
+          <div className="grid gap-12 lg:grid-cols-2">
+            <div className="glass-card p-10 stagger-children">
+              <h3 className="text-sm font-black uppercase tracking-widest text-slate-500 mb-8 flex items-center gap-3">
+                <span className="h-2 w-2 rounded-full bg-indigo-500"></span> 
+                Verification Logs
+              </h3>
+              <ReviewsList
+                reviews={reviews}
+                averageRating={ratingSummary.averageRating || 0}
+                totalReviews={ratingSummary.totalReviews || 0}
+              />
+            </div>
+
+            <div className="glass-card p-10">
+              <h3 className="text-sm font-black uppercase tracking-widest text-slate-500 mb-8 flex items-center gap-3">
+                <span className="h-2 w-2 rounded-full bg-emerald-500"></span> 
+                Submit Unit Intel
+              </h3>
+              <ReviewForm
+                productId={id}
+                eligibleOrders={eligibleOrders}
+                onReviewSubmitted={handleReviewSubmitted}
+                session={session}
+              />
+            </div>
+          </div>
         </div>
-      </div>
 
-      <ErrorMessage message={error} />
-
-      {/* Reviews and Feedback Section */}
-      <div className="mt-10 grid gap-8 md:grid-cols-2">
-        {/* Reviews List */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="text-xl font-bold text-slate-900 mb-4">💬 Customer Feedback</h2>
-          <ReviewsList
-            reviews={reviews}
-            averageRating={ratingSummary.averageRating || 0}
-            totalReviews={ratingSummary.totalReviews || 0}
-          />
+        {/* Related Assets */}
+        <div className="mt-32">
+          <div className="flex items-center gap-8 mb-16">
+            <h2 className="text-3xl font-black uppercase tracking-tighter">Recommended Intel</h2>
+            <div className="h-px flex-1 bg-white/5"></div>
+          </div>
+          <RecommendedProducts productId={id} />
         </div>
-
-        {/* Write Review Form */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="text-xl font-bold text-slate-900 mb-4">✍️ Share Your Experience</h2>
-          <ReviewForm
-            productId={id}
-            eligibleOrders={eligibleOrders}
-            onReviewSubmitted={handleReviewSubmitted}
-            session={session}
-          />
-        </div>
-      </div>
-
-      {/* Recommended Products */}
-      <div className="mt-10">
-        <RecommendedProducts productId={id} />
-      </div>
-    </section>
+      </section>
+    </div>
   );
 }
+

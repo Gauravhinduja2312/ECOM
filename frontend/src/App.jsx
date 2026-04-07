@@ -3,6 +3,8 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute';
+import { ToastProvider } from './services/ToastContext';
+import { ToastContainer } from './components/Toast';
 import {
   preloadAdminDashboardPage,
   preloadAuthPage,
@@ -57,92 +59,96 @@ function App() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.14),_transparent_45%),linear-gradient(180deg,#f8fafc_0%,#eef2ff_100%)] text-slate-900">
-      <Navbar />
-      <main>
-        <Suspense fallback={<RouteLoader />}>
-          <Routes>
-            <Route path="/" element={<LandingPage />} />
-            <Route path="/auth" element={<AuthPage />} />
-            <Route path="/login" element={<AuthPage />} />
-            <Route path="/signup" element={<AuthPage />} />
-            <Route path="/products" element={<ProductsPage />} />
-            <Route path="/products/:id" element={<ProductDetailPage />} />
-            <Route path="/cart" element={<CartPage />} />
-            <Route
-              path="/checkout"
-              element={
-                <ProtectedRoute>
-                  <CheckoutPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/order-success/:id"
-              element={
-                <ProtectedRoute>
-                  <OrderSuccessPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/order/:id"
-              element={
-                <ProtectedRoute>
-                  <OrderSuccessPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/select-role"
-              element={
-                <ProtectedRoute>
-                  <RoleSelectionPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/dashboard"
-              element={
-                <ProtectedRoute>
-                  <UserDashboardPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/seller/dashboard"
-              element={
-                <ProtectedRoute>
-                  <SellerPortalPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/sell"
-              element={<Navigate to="/seller/dashboard" replace />}
-            />
-            <Route
-              path="/seller/pickups"
-              element={<Navigate to="/dashboard" replace />}
-            />
-            <Route
-              path="/admin"
-              element={
-                <AdminRoute>
-                  <AdminDashboardPage />
-                </AdminRoute>
-              }
-            />
-            <Route
-              path="/admin/add-product"
-              element={<Navigate to="/admin" replace />}
-            />
-            <Route path="*" element={<NotFoundPage />} />
-          </Routes>
-        </Suspense>
-      </main>
-    </div>
+    <ToastProvider>
+      <div className="min-h-screen bg-[#020617] text-white">
+        <Navbar />
+        <main>
+          <Suspense fallback={<RouteLoader />}>
+            <Routes>
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/auth" element={<AuthPage />} />
+              <Route path="/login" element={<AuthPage />} />
+              <Route path="/signup" element={<AuthPage />} />
+              <Route path="/products" element={<ProductsPage />} />
+              <Route path="/products/:id" element={<ProductDetailPage />} />
+              <Route path="/cart" element={<CartPage />} />
+              <Route
+                path="/checkout"
+                element={
+                  <ProtectedRoute>
+                    <CheckoutPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/order-success/:id"
+                element={
+                  <ProtectedRoute>
+                    <OrderSuccessPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/order/:id"
+                element={
+                  <ProtectedRoute>
+                    <OrderSuccessPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/select-role"
+                element={
+                  <ProtectedRoute>
+                    <RoleSelectionPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/dashboard"
+                element={
+                  <ProtectedRoute>
+                    <UserDashboardPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/seller/dashboard"
+                element={
+                  <ProtectedRoute>
+                    <SellerPortalPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/sell"
+                element={<Navigate to="/seller/dashboard" replace />}
+              />
+              <Route
+                path="/seller/pickups"
+                element={<Navigate to="/dashboard" replace />}
+              />
+              <Route
+                path="/admin"
+                element={
+                  <AdminRoute>
+                    <AdminDashboardPage />
+                  </AdminRoute>
+                }
+              />
+              <Route
+                path="/admin/add-product"
+                element={<Navigate to="/admin" replace />}
+              />
+              <Route path="*" element={<NotFoundPage />} />
+            </Routes>
+          </Suspense>
+        </main>
+        <ToastContainer />
+      </div>
+    </ToastProvider>
   );
 }
 
 export default App;
+

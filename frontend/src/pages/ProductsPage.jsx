@@ -2,19 +2,19 @@ import { useEffect, useMemo, useState } from 'react';
 import ProductCard from '../components/ProductCard';
 import Loader from '../components/Loader';
 import ErrorMessage from '../components/ErrorMessage';
-import SuccessMessage from '../components/SuccessMessage';
 import { supabase } from '../services/supabaseClient';
 import { useCart } from '../services/CartContext';
 import { useAuth } from '../services/AuthContext';
+import { useToast } from '../services/ToastContext';
 
 export default function ProductsPage() {
   const { addToCart } = useCart();
   const { profile } = useAuth();
+  const { addToast } = useToast();
   const [products, setProducts] = useState([]);
   const [recommendedProducts, setRecommendedProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [successMessage, setSuccessMessage] = useState('');
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('all');
 
@@ -41,14 +41,13 @@ export default function ProductsPage() {
 
   const handleAddToCart = async (productId) => {
     setError('');
-    setSuccessMessage('');
 
     try {
       await addToCart(productId);
-      setSuccessMessage('Added to cart successfully.');
-      window.setTimeout(() => setSuccessMessage(''), 2000);
+      addToast('Asset synchronized with acquisition cart.', 'success');
     } catch (addError) {
       setError(addError.message || 'Failed to add product to cart.');
+      addToast(addError.message || 'Synchronization failed.', 'error');
     }
   };
 
@@ -178,46 +177,62 @@ export default function ProductsPage() {
     };
   }, [profile?.id, visibleProducts]);
 
-  if (loading) return <Loader text="Loading products..." />;
+  if (loading) return <Loader text="Synchronizing Catalog Domain..." />;
 
   return (
-    <section className="mx-auto max-w-6xl px-4 py-8 animate-fade-in-up sm:py-10">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <h1 className="text-gradient text-2xl font-black tracking-tight sm:text-3xl">Products</h1>
-        <p className="text-sm text-slate-600">{filteredProducts.length} item(s) available</p>
+    <div className="bg-[#020617] min-h-screen pt-64 pb-20 stagger-elite text-white">
+      <section className="mx-auto max-w-7xl px-6">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-16">
+        <div>
+          <h1 className="text-4xl md:text-6xl font-black tracking-tight uppercase inline-flex items-center gap-5">
+            <span className="h-16 w-16 rounded-3xl bg-indigo-600 flex items-center justify-center text-3xl shadow-[0_0_40px_rgba(79,70,229,0.3)]">📦</span>
+            Campus Catalog
+          </h1>
+          <p className="mt-4 text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">Global Inventory Hub · Verified Assets Only</p>
+        </div>
+        <div className="flex flex-col items-end">
+          <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Active Persistence</p>
+          <p className="text-3xl font-black text-indigo-400 tracking-tighter">{filteredProducts.length} <span className="text-sm opacity-40">UNITS</span></p>
+        </div>
       </div>
 
-      <div className="glass-panel soft-ring mt-6 grid gap-3 rounded-2xl p-4 sm:grid-cols-2 hover-glow">
-        <input
-          type="text"
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder="Search products"
-          className="form-input"
-        />
-        <select
-          value={category}
-          onChange={(event) => setCategory(event.target.value)}
-          className="form-input"
-        >
-          {categories.map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
-        </select>
+      <div className="glass-elite grid gap-8 rounded-[2.5rem] p-10 lg:grid-cols-2 mb-20 border border-white/5 shadow-2xl">
+        <div className="space-y-3">
+          <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-4 block">Search Intelligence</label>
+          <input
+            type="text"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="e.g. Protocol Hardware, Textbook Intel..."
+            className="elite-input px-8 py-5"
+          />
+        </div>
+        <div className="space-y-3">
+          <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-4 block">Domain Filter</label>
+          <select
+            value={category}
+            onChange={(event) => setCategory(event.target.value)}
+            className="elite-input px-8 py-5"
+          >
+            {categories.map((option) => (
+              <option key={option} value={option}>
+                {option.toUpperCase()}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <ErrorMessage message={error} />
-      <SuccessMessage message={successMessage} />
 
       {recommendedProducts.length > 0 && (
-        <div className="mt-6 space-y-3">
-          <div className="flex items-end justify-between">
-            <h2 className="text-xl font-bold text-slate-900">Recommended for You</h2>
-            <p className="text-xs text-slate-500">Based on your shopping activity</p>
+        <div className="mb-24 space-y-12">
+          <div className="flex items-center gap-8">
+            <h2 className="text-3xl font-black uppercase tracking-tighter">Recommended Intel</h2>
+            <div className="h-px flex-1 bg-white/5"></div>
+            <p className="text-[10px] font-black uppercase tracking-widest text-indigo-400">Tailored Assets</p>
           </div>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-3">
             {recommendedProducts.map((product) => (
               <ProductCard key={`rec-${product.id}`} product={product} onAdd={handleAddToCart} />
             ))}
@@ -225,26 +240,29 @@ export default function ProductsPage() {
         </div>
       )}
 
-      <div className="mt-6 space-y-3">
-        <div className="flex items-end justify-between">
-          <h2 className="text-xl font-bold text-slate-900">All Products</h2>
-          <p className="text-xs text-slate-500">Browse the full marketplace catalog</p>
+      <div className="space-y-12">
+        <div className="flex items-center gap-8">
+          <h2 className="text-3xl font-black uppercase tracking-tighter">Full Inventory</h2>
+          <div className="h-px flex-1 bg-white/5"></div>
+          <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Baseline Records</p>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 stagger-children">
-          {allProductsList.map((product) => (
-            <ProductCard key={product.id} product={product} onAdd={handleAddToCart} />
-          ))}
-        </div>
+        {allProductsList.length > 0 ? (
+          <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-3 stagger-elite">
+            {allProductsList.map((product) => (
+              <ProductCard key={product.id} product={product} onAdd={handleAddToCart} />
+            ))}
+          </div>
+        ) : (
+          <div className="glass-card flex flex-col items-center justify-center p-20 text-center border-dashed border-white/5 opacity-50">
+            <p className="text-6xl mb-8 animate-pulse">📡</p>
+            <h3 className="text-2xl font-black uppercase tracking-tighter mb-4 text-white">No Assets Located</h3>
+            <p className="text-slate-500 text-sm max-w-sm font-medium leading-relaxed">The catalog domain is currently empty or your transmission query returned null results.</p>
+          </div>
+        )}
       </div>
-
-      {!allProductsList.length && !recommendedProducts.length && !error && (
-        <div className="glass-panel mt-8 rounded-2xl border border-dashed border-indigo-200 p-8 text-center text-slate-600">
-          <p className="text-2xl">🔎</p>
-          <p className="mt-2 font-semibold text-slate-800">No products match your search.</p>
-          <p className="mt-1 text-sm">Try a different keyword or category.</p>
-        </div>
-      )}
-    </section>
+      </section>
+    </div>
   );
 }
+
