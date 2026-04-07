@@ -25,49 +25,49 @@ export default function Navbar() {
   };
 
   return (
-    <header className="fixed top-6 left-1/2 -translate-x-1/2 z-50 w-[95%] max-w-6xl">
-      <nav className="glass-panel rounded-[2rem] border border-white/20 px-6 py-3 flex items-center justify-between shadow-2xl backdrop-blur-2xl">
-        {/* Brand */}
-        <Link to="/" className="group flex items-center gap-3 transition-transform hover:scale-105 active:scale-95">
-          <div className="h-10 w-10 rounded-2xl bg-indigo-600 flex items-center justify-center text-white font-black text-xs shadow-lg shadow-indigo-500/20 group-hover:rotate-12 transition-all">
-            SM
+    <header className="fixed top-8 left-1/2 -translate-x-1/2 z-50 w-[92%] max-w-6xl animate-van-reveal">
+      <nav className="glass-vanguard rounded-full px-8 py-3 flex items-center justify-between border border-white/5 shadow-2xl backdrop-blur-3xl filter saturate-150">
+        {/* Brand Terminal */}
+        <Link to="/" className="group flex items-center gap-4 transition-all hover:scale-105">
+          <div className="h-10 w-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-black text-sm shadow-[0_0_20px_rgba(79,70,229,0.3)] group-hover:rotate-12 transition-transform">
+            V
           </div>
-          <div className="hidden sm:block">
-            <span className="text-sm font-black tracking-tighter text-slate-900 uppercase">Student</span>
-            <span className="block text-[10px] font-black tracking-[0.3em] text-indigo-500 uppercase -mt-1">Marketplace</span>
+          <div className="hidden lg:block">
+            <span className="text-xs font-black tracking-[0.3em] text-white uppercase italic">Student Marketplace</span>
+            <span className="block text-[8px] font-black tracking-[0.4em] text-indigo-400 uppercase -mt-0.5">Vanguard Engine</span>
           </div>
         </Link>
 
-        {/* Desktop Navigation */}
+        {/* Tactical Navigation Links */}
         <div className="flex items-center gap-2">
           <Link
             to="/products"
             onMouseEnter={preloadProductsPage}
-            className="hidden md:flex items-center gap-2 px-4 py-2 text-xs font-black uppercase tracking-widest text-slate-600 hover:text-indigo-600 transition"
+            className="hidden md:flex items-center gap-2 px-6 py-2 text-[10px] font-black uppercase tracking-[0.25em] text-slate-500 hover:text-white transition group"
           >
-            Explore
+            Explore <span className="text-indigo-500 transition-transform group-hover:translate-x-1">→</span>
           </Link>
 
           <Link
             to="/cart"
             onMouseEnter={preloadCartPage}
-            className="group relative flex items-center justify-center h-10 w-10 rounded-xl bg-slate-50 border border-slate-100 hover:bg-indigo-50 hover:border-indigo-100 transition"
+            className="group relative flex items-center justify-center h-10 w-10 rounded-xl bg-white/5 border border-white/5 hover:bg-white/10 hover:border-indigo-500/30 transition shadow-inner"
           >
             <span className="text-lg">🛒</span>
             {items.length > 0 && (
-              <span className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-indigo-600 text-white text-[10px] font-black flex items-center justify-center shadow-lg animate-pulse">
+              <span className="absolute -top-2 -right-2 h-4 w-4 rounded-full bg-indigo-600 text-[9px] font-black flex items-center justify-center text-white shadow-lg animate-pulse">
                 {items.length}
               </span>
             )}
           </Link>
 
           {profile ? (
-            <div className="flex items-center gap-2 ml-2 pl-4 border-l border-slate-100">
+            <div className="flex items-center gap-3 ml-4 pl-4 border-l border-white/5">
               {profile.role === 'admin' ? (
                 <Link
                   to="/admin"
                   onMouseEnter={() => Promise.allSettled([preloadAdminDashboardPage(), preloadAddProductPage()])}
-                  className="hidden sm:flex btn-elite px-4 py-2 text-[10px]"
+                  className="hidden sm:flex btn-vanguard px-6 py-2.5 text-[9px] tracking-[0.2em]"
                 >
                   Workspace
                 </Link>
@@ -75,7 +75,7 @@ export default function Navbar() {
                 <>
                   <Link
                     to="/select-role"
-                    className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-50 border border-slate-100 hover:bg-slate-200 transition"
+                    className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/5 border border-white/5 hover:bg-white/10 hover:border-violet-500/30 transition"
                     title="Switch Mode"
                   >
                     <span>🔄</span>
@@ -83,13 +83,17 @@ export default function Navbar() {
                   <Link
                     to="/dashboard"
                     onMouseEnter={preloadUserDashboardPage}
-                    className="group flex items-center gap-3 pl-2 pr-1 py-1 rounded-2xl bg-slate-50 border border-slate-100 hover:border-indigo-200 transition"
+                    className="group flex items-center gap-4 pl-3 pr-2 py-1.5 rounded-2xl bg-white/5 border border-white/5 hover:border-indigo-500/20 transition-all hover:bg-white/[0.08]"
                   >
                     <div className="hidden lg:block text-right">
-                      <p className="text-[9px] font-black text-slate-400 tracking-widest uppercase">Member</p>
-                      <p className="text-[11px] font-bold text-slate-900 -mt-0.5">{profile.email?.split('@')[0]}</p>
+                      <p className="text-[8px] font-black text-slate-500 tracking-widest uppercase">Identity</p>
+                      <p className="text-[10px] font-black text-white tracking-tighter uppercase -mt-1">{profile.email?.split('@')[0]}</p>
                     </div>
-                    <div className="h-8 w-8 rounded-xl bg-white border border-slate-200 shadow-sm flex items-center justify-center text-sm group-hover:scale-110 transition">
+                    <div className={`h-8 w-8 rounded-xl flex items-center justify-center text-sm border-2 transition-all group-hover:scale-110 ${
+                      profile.loyalty_tier === 'gold' ? 'border-amber-400 bg-amber-400/10 text-amber-400' :
+                      profile.loyalty_tier === 'silver' ? 'border-slate-300 bg-slate-300/10 text-slate-300' :
+                      'border-indigo-500/20 bg-indigo-500/10 text-white'
+                    }`}>
                       {profile.loyalty_tier === 'gold' ? '💎' : profile.loyalty_tier === 'silver' ? '🥈' : '👤'}
                     </div>
                   </Link>
@@ -97,16 +101,17 @@ export default function Navbar() {
               )}
               <button
                 onClick={handleLogout}
-                className="h-10 w-10 rounded-xl flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 transition"
+                className="h-10 w-10 rounded-xl flex items-center justify-center text-slate-500 hover:text-red-500 hover:bg-red-500/10 transition group"
+                title="Logout Identity"
               >
-                <span>↪</span>
+                <span className="text-xl group-hover:scale-110 transition-transform">↪</span>
               </button>
             </div>
           ) : (
             <Link
               to="/login"
               onMouseEnter={preloadAuthPage}
-              className="btn-elite px-6 py-2.5 text-[10px]"
+              className="btn-vanguard px-6 py-2.5 text-[9px] tracking-[0.2em]"
             >
               Initialize Identity
             </Link>

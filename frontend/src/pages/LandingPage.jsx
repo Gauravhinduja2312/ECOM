@@ -1,142 +1,112 @@
-import { useState } from 'react';
-import { Helmet } from 'react-helmet-async';
-import { supabase } from '../services/supabaseClient';
-import ErrorMessage from '../components/ErrorMessage';
-import { preloadProductsPage } from '../utils/preloadRoutes';
+import { Link } from 'react-router-dom';
+import { useAuth } from '../services/AuthContext';
 
 export default function LandingPage() {
-  const [email, setEmail] = useState('');
-  const [status, setStatus] = useState('');
-  const [error, setError] = useState('');
-
-  const handleLeadSubmit = async (event) => {
-    event.preventDefault();
-    setError('');
-    setStatus('');
-    const { error: insertError } = await supabase.from('leads').insert({ email });
-    if (insertError) {
-      setError(insertError.message);
-      return;
-    }
-    setStatus('Thanks! We will share student deals with you soon.');
-    setEmail('');
-  };
+  const { profile } = useAuth();
 
   return (
-    <>
-      <Helmet>
-        <title>Student Marketplace | Elite Campus Commerce</title>
-        <meta name="description" content="The premier destination for campus essentials, optimized for students." />
-      </Helmet>
-
-      <div className="relative overflow-hidden bg-slate-950 pb-20 pt-24 sm:pt-32">
-        {/* Animated Background Elements */}
-        <div className="absolute inset-0 -z-10">
-          <div className="absolute -top-[30%] -left-[10%] h-[70%] w-[70%] rounded-full bg-indigo-600/20 blur-[120px] animate-float"></div>
-          <div className="absolute top-[20%] -right-[10%] h-[60%] w-[60%] rounded-full bg-violet-600/10 blur-[120px] animate-float" style={{ animationDelay: '2s' }}></div>
-        </div>
-
-        <div className="mx-auto max-w-7xl px-6 lg:px-8">
-          <div className="mx-auto max-w-3xl text-center stagger-children">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-bold uppercase tracking-widest mb-8">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
-              </span>
-              Now Live at VES Institute
-            </div>
-            
-            <h1 className="text-5xl font-black tracking-tight text-white sm:text-7xl">
-              Elevate Your <span className="text-gradient">Campus Life.</span>
-            </h1>
-            
-            <p className="mt-8 text-lg leading-8 text-slate-400 max-w-2xl mx-auto">
-              The premium marketplace for student essentials. Buy quality gear from the store or sell your used items directly to us for instant earnings.
-            </p>
-
-            <div className="mt-10 flex items-center justify-center gap-x-6">
-              <a
-                href="/products"
-                onMouseEnter={preloadProductsPage}
-                className="btn-elite text-lg px-8 py-4"
-              >
-                Enter Marketplace <span>→</span>
-              </a>
-              <a href="#how-it-works" className="text-sm font-bold leading-6 text-white hover:text-indigo-400 transition">
-                Learn more <span aria-hidden="true">↓</span>
-              </a>
-            </div>
-
-            {/* Trust Cloud */}
-            <div className="mt-16 pt-16 border-t border-white/5">
-              <p className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-8">Trusted by Students From</p>
-              <div className="flex flex-wrap justify-center gap-8 opacity-40 grayscale contrast-125">
-                <span className="text-xl font-black text-white italic tracking-tighter">VESIT</span>
-                <span className="text-xl font-black text-white italic tracking-tighter">VPT</span>
-                <span className="text-xl font-black text-white italic tracking-tighter">VESIM</span>
-                <span className="text-xl font-black text-white italic tracking-tighter">VESP</span>
-              </div>
-            </div>
-          </div>
-        </div>
+    <div className="relative min-h-screen overflow-hidden bg-slate-950">
+      {/* Vanguard Ambience Background */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-[-10%] left-[-10%] h-[600px] w-[600px] rounded-full bg-indigo-600/10 blur-[120px] animate-pulse"></div>
+        <div className="absolute bottom-[-10%] right-[-10%] h-[600px] w-[600px] rounded-full bg-purple-600/10 blur-[120px] animate-pulse" style={{ animationDelay: '4s' }}></div>
+        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay"></div>
       </div>
 
-      <section id="how-it-works" className="py-24 bg-white relative">
-        <div className="mx-auto max-w-7xl px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 stagger-children">
-            <div className="p-8 rounded-3xl bg-slate-50 border border-slate-100 hover-lift group">
-              <div className="icon-pill mb-6 group-hover:scale-110 transition">🛒</div>
-              <h3 className="text-xl font-bold text-slate-900 mb-3">Shop Essentials</h3>
-              <p className="text-slate-600 text-sm leading-relaxed">
-                Browse a curated catalog of books, tech, and lifestyle items owned and verified by the Campus Store.
-              </p>
-            </div>
-            <div className="p-8 rounded-3xl bg-slate-50 border border-slate-100 hover-lift group">
-              <div className="icon-pill mb-6 group-hover:scale-110 transition" style={{ background: 'linear-gradient(135deg, rgba(124, 58, 237, 0.1), rgba(217, 70, 239, 0.1))', color: '#7c3aed' }}>📤</div>
-              <h3 className="text-xl font-bold text-slate-900 mb-3">Pitch Your Gear</h3>
-              <p className="text-slate-600 text-sm leading-relaxed">
-                Don't wait for buyers. Pitch your used items directly to us. We buy your inventory so you get paid faster.
-              </p>
-            </div>
-            <div className="p-8 rounded-3xl bg-slate-50 border border-slate-100 hover-lift group">
-              <div className="icon-pill mb-6 group-hover:scale-110 transition" style={{ background: 'linear-gradient(135deg, rgba(8, 145, 178, 0.1), rgba(14, 165, 233, 0.1))', color: '#0891b2' }}>🏆</div>
-              <h3 className="text-xl font-bold text-slate-900 mb-3">Earn Rewards</h3>
-              <p className="text-slate-600 text-sm leading-relaxed">
-                Every purchase earns loyalty points. Level up to Gold Tier for exclusive early access and special discounts.
-              </p>
-            </div>
+      <nav className="fixed top-8 left-1/2 -translate-x-1/2 z-50 w-[90%] max-w-5xl">
+        <div className="glass-card px-8 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="h-8 w-8 rounded-lg bg-indigo-600 flex items-center justify-center font-black text-white text-xs">SM</div>
+            <span className="text-sm font-black tracking-widest uppercase text-white">Vanguard</span>
+          </div>
+          <div className="flex items-center gap-6">
+            <Link to="/products" className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-white transition">Catalog</Link>
+            {profile ? (
+              <Link to="/select-role" className="btn-vanguard py-2 px-6 text-[9px]">Workspace</Link>
+            ) : (
+              <Link to="/login" className="btn-vanguard py-2 px-6 text-[9px]">Identity</Link>
+            )}
           </div>
         </div>
-      </section>
+      </nav>
 
-      <section className="py-24 overflow-hidden">
-        <div className="mx-auto max-w-7xl px-6 lg:px-8">
-          <div className="relative glass-panel rounded-[2.5rem] p-12 md:p-20 overflow-hidden border border-indigo-100 animate-glow">
-            <div className="relative z-10 max-w-2xl stagger-children">
-              <h2 className="text-4xl font-black text-slate-900 mb-6">Stay Ahead with <br /><span className="text-gradient">Campus Alerts.</span></h2>
-              <p className="text-slate-600 mb-8">Join 1,000+ students receiving the best deals and restock alerts directly in their inbox.</p>
-              
-              <form onSubmit={handleLeadSubmit} className="flex flex-col sm:flex-row gap-4">
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  placeholder="Enter your college email"
-                  className="form-input flex-1 py-4 px-6 text-lg"
-                />
-                <button type="submit" className="btn-elite px-10">
-                  Join Waitlist
-                </button>
-              </form>
-              <ErrorMessage message={error} />
-              {status && <p className="mt-4 text-emerald-600 font-bold italic">{status}</p>}
-            </div>
-            
-            <div className="hidden lg:block absolute top-0 right-0 w-1/3 h-full bg-gradient-to-l from-indigo-50 to-transparent"></div>
+      <main className="van-container pt-40 pb-20 relative z-10">
+        <section className="text-center stagger-van">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-[0.25em] text-indigo-400 mb-8">
+            The World's Elite Student Commerce
           </div>
-        </div>
-      </section>
-    </>
+          
+          <h1 className="text-7xl md:text-9xl font-black tracking-tighter leading-[0.8] mb-10">
+            <span className="text-gradient-van">DESIGNED FOR</span> <br />
+            <span className="text-accent-van">THE CAMPUS ELITE.</span>
+          </h1>
+
+          <p className="max-w-2xl mx-auto text-lg md:text-xl text-slate-400 font-medium leading-relaxed mb-16">
+            A hyper-professional acquisition engine for the university ecosystem. <br />
+            Pitch inventory, track logistics, and scale your student earnings.
+          </p>
+
+          <div className="flex flex-wrap items-center justify-center gap-6">
+            <Link to="/products" className="btn-vanguard py-5 px-12 group">
+              Initialize Access 
+              <span className="ml-3 transition-transform group-hover:translate-x-2">→</span>
+            </Link>
+            <Link to="/select-role" className="px-10 py-5 rounded-xl border border-white/10 hover:bg-white/5 transition font-black text-xs uppercase tracking-widest">
+              Portal Overview
+            </Link>
+          </div>
+        </section>
+
+        {/* Hero Bento Feature Section */}
+        <section className="mt-40 grid gap-8 lg:grid-cols-12 stagger-van">
+          <div className="lg:col-span-8 glass-card p-12">
+            <div className="mb-8 h-12 w-12 rounded-2xl bg-indigo-500/20 flex items-center justify-center text-2xl">🏛️</div>
+            <h3 className="text-4xl font-black text-white mb-6 tracking-tighter uppercase">Direct Institutional Hub</h3>
+            <p className="text-slate-400 text-lg leading-relaxed max-w-xl">
+              We've partnered with major campus councils to create a centralized, high-liquidity marketplace. 
+              Secure transactions, verified logistics, and instant institutional trust.
+            </p>
+          </div>
+          <div className="lg:col-span-4 glass-card p-12 overflow-hidden flex flex-col justify-end group">
+            <div className="absolute top-0 right-0 p-8 text-8xl opacity-10 group-hover:scale-125 transition-transform duration-700">💎</div>
+            <h3 className="text-3xl font-black text-white mb-4 tracking-tighter uppercase">Prestige Rewards</h3>
+            <p className="text-slate-400 text-sm font-medium">Earn point multipliers for every verified sale and climb to the Gold Elite tier.</p>
+          </div>
+
+          <div className="lg:col-span-4 glass-card p-12">
+            <h3 className="text-2xl font-black text-white mb-4 tracking-tighter uppercase">0% Seller Risk</h3>
+            <p className="text-slate-400 text-sm font-medium">Platform-backed security ensures every acquisition deal is protected and paid instantly.</p>
+          </div>
+          <div className="lg:col-span-8 glass-card p-12 flex items-center justify-between">
+            <div className="flex-1">
+              <h3 className="text-4xl font-black text-white mb-2 tracking-tighter uppercase">99.9% Fluidity</h3>
+              <p className="text-slate-400 text-sm font-medium">The fastest inventory acquisition engine on campus.</p>
+            </div>
+            <div className="hidden sm:flex gap-4">
+              {[1, 2, 3].map(i => (
+                <div key={i} className="h-16 w-16 rounded-2xl bg-white/5 border border-white/5 flex items-center justify-center text-xl animate-float-van" style={{ animationDelay: `${i * 1.5}s` }}>
+                  🚀
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <footer className="mt-40 border-t border-white/5 pt-20 flex flex-wrap justify-between items-center gap-10">
+          <div className="flex items-center gap-4">
+            <div className="h-12 w-12 rounded-xl bg-indigo-600 flex items-center justify-center font-black text-white text-md">S</div>
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-widest text-white">Student Marketplace</p>
+              <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest">Vanguard Terminal v3.0</p>
+            </div>
+          </div>
+          <div className="flex gap-10 text-[9px] font-black uppercase tracking-[0.3em] text-slate-500">
+            <a href="#" className="hover:text-white transition">Protocol</a>
+            <a href="#" className="hover:text-white transition">Network</a>
+            <a href="#" className="hover:text-white transition">Auth</a>
+          </div>
+        </footer>
+      </main>
+    </div>
   );
 }
