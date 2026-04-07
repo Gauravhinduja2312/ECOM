@@ -55,6 +55,17 @@ function normalizeListingDraft(rawDraft) {
   };
 }
 
+function buildListingInsertPayload(draft, userId) {
+  return {
+    ...draft,
+    seller_id: userId,
+    verification_status: 'pending',
+    price_offer_status: 'none',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+}
+
 async function createProductOffer(req, res) {
   try {
     const draft = normalizeListingDraft(req.body?.listingDraft);
