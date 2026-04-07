@@ -153,7 +153,7 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="bg-[#020617] min-h-screen pt-64 pb-20 flex flex-col items-center justify-center px-4">
+    <div className="bg-[#020617] min-h-screen pt-48 pb-20 flex flex-col items-center justify-center px-4">
       {/* Background Ambience */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-1/4 left-1/4 h-[500px] w-[500px] rounded-full bg-indigo-600/10 blur-[120px] animate-pulse"></div>
@@ -307,7 +307,11 @@ export default function AuthPage() {
             <button
               type="button"
               className="text-[10px] font-black text-slate-500 hover:text-white transition uppercase tracking-[0.2em]"
-              onClick={() => navigate(isSignup ? '/login' : '/signup')}
+              onClick={() => {
+                const target = isSignup ? '/login' : '/signup';
+                navigate(target);
+                setIsSignup(!isSignup); // Immediate state update for better responsiveness
+              }}
             >
               {isSignup ? '← Back to login' : '→ Create a new account'}
             </button>

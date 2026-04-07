@@ -122,6 +122,20 @@ export function AuthProvider({ children }) {
         const { error } = await supabase.auth.signOut();
         if (error) throw error;
       },
+      async updateProfile(updates) {
+        if (!profile?.id) throw new Error('No active profile to update');
+
+        const { data, error } = await supabase
+          .from('users')
+          .update(updates)
+          .eq('id', profile.id)
+          .select()
+          .single();
+
+        if (error) throw error;
+        setProfile(data);
+        return data;
+      },
     }),
     [loading, profile, session]
   );

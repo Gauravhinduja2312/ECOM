@@ -57,6 +57,7 @@ export default function ProductsPage() {
       const { data, error: fetchError } = await supabase
         .from('products')
         .select('*')
+        .gt('stock', 0) // Ensure only in-stock items are fetched
         .order('id', { ascending: false });
 
       if (fetchError) {
@@ -180,7 +181,7 @@ export default function ProductsPage() {
   if (loading) return <Loader text="Loading shop..." />;
 
   return (
-    <div className="bg-[#020617] min-h-screen pt-64 pb-20 stagger-elite text-white">
+    <div className="bg-[#020617] min-h-screen pt-48 pb-20 stagger-elite text-white">
       <section className="mx-auto max-w-7xl px-6">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-16">
         <div>

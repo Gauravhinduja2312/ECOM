@@ -14,7 +14,7 @@ export default function LandingPage() {
       </div>
 
 
-      <main className="elite-container pt-80 pb-20 relative z-10">
+      <main className="elite-container pt-48 pb-20 relative z-10">
         <section className="text-center stagger-elite">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-[0.25em] text-indigo-400 mb-8">
             The Best Campus Marketplace
