@@ -309,12 +309,14 @@ async function acquireProductInventory(req, res) {
       return res.status(400).json({ error: 'Student has not accepted a price offer yet' });
     }
 
+    const retailPrice = Number(finalPrice) || (Number(product.price) * 1.1).toFixed(2);
+
     const payload = {
       seller_id: null, // Ownership transfers to platform!
-      final_price: Number(finalPrice),
-      price: Number(finalPrice), // Ensure the displayed price is the new retail price
+      final_price: Number(retailPrice),
+      price: Number(retailPrice), // Ensure the displayed price is the new retail price
       verification_status: 'verified', // Finally live
-      admin_review_note: `Acquired by Campus Store. Originally paid student ₹${product.price}`,
+      admin_review_note: `Acquired by Campus Store. Paid student ₹${product.proposed_price || product.price}. Ref: ${req.body.payoutReference || 'N/A'}`,
       updated_at: new Date().toISOString(),
     };
 

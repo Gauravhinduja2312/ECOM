@@ -139,6 +139,25 @@ export default function AdminDashboardPage() {
     }
   };
 
+  const handleAcquire = async (submissionId, payoutPrice, payoutReference) => {
+    try {
+      setAcquireLoadingId(submissionId);
+      const finalPrice = acquireDrafts[submissionId] || (payoutPrice * 1.1).toFixed(2);
+      
+      await apiRequest(`/api/admin/products/${submissionId}/acquire`, 'PATCH', session.access_token, {
+        finalPrice: Number(finalPrice),
+        payoutReference
+      });
+      
+      addToast('Item purchased and listed with 10% markup! 🚀', 'success');
+      await fetchAdminData();
+    } catch (error) {
+      addToast(error.message || 'Failed to acquire item.', 'error');
+    } finally {
+      setAcquireLoadingId(null);
+    }
+  };
+
   const handleMarkSellerPaid = async (sellerId, orderItemIds) => {
     try {
       setPayoutProcessingSellerId(sellerId);
@@ -175,25 +194,7 @@ export default function AdminDashboardPage() {
     }
   };
 
-  const handleAcquire = async (submissionId, defaultPrice) => {
-    try {
-      setAcquireLoadingId(submissionId);
-      const finalPrice = acquireDrafts[submissionId] ?? defaultPrice;
-      if (!finalPrice || isNaN(finalPrice)) {
-        addToast('Invalid retail valuation.', 'error');
-        return;
-      }
-      await apiRequest(`/api/admin/products/${submissionId}/acquire`, 'PATCH', session.access_token, {
-        finalPrice: Number(finalPrice)
-      });
-      addToast('Item added to live store.', 'success');
-      await fetchAdminData();
-    } catch (error) {
-      addToast(error.message || 'Failed to add item.', 'error');
-    } finally {
-      setAcquireLoadingId(null);
-    }
-  };
+
 
   if (loading) return <Loader text="Loading Admin Dashboard..." />;
 
@@ -332,15 +333,49 @@ export default function AdminDashboardPage() {
                           {sub.verification_status === 'pending' && (
                             <>
                               {isAcceptedByStudent ? (
-                                <div className="flex gap-3">
-                                  <input 
-                                    type="number" 
-                                    className="elite-input w-32 py-3" 
-                                    placeholder="Retail ₹"
-                                    value={acquireDrafts[sub.id] ?? sub.proposed_price ?? ''}
-                                    onChange={(e) => setAcquireDrafts({...acquireDrafts, [sub.id]: e.target.value})}
-                                  />
-                                  <button onClick={() => handleAcquire(sub.id, sub.proposed_price)} className="btn-elite px-6 py-3 text-[10px]">ADD TO STORE</button>
+                                <div className="flex flex-col gap-4 p-6 bg-white/5 rounded-3xl border border-white/5 w-full md:w-[400px]">
+                                  <div className="space-y-4">
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-indigo-400">Buyout Payout (Student UPI)</p>
+                                    <div className="p-4 bg-indigo-600/10 rounded-2xl border border-indigo-600/20">
+                                      <p className="text-sm font-black text-white mb-1">Payable: {formatCurrency(sub.proposed_price || sub.price)}</p>
+                                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">UPI: {sub.seller_upi_id || 'Not Provided'}</p>
+                                    </div>
+                                    
+                                    <div>
+                                      <label className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Set Retail Price (10% Markup Suggested)</label>
+                                      <input 
+                                        type="number" 
+                                        className="elite-input py-3" 
+                                        placeholder="Retail ₹"
+                                        value={acquireDrafts[sub.id] ?? ((sub.proposed_price || sub.price) * 1.1).toFixed(2)}
+                                        onChange={(e) => setAcquireDrafts({...acquireDrafts, [sub.id]: e.target.value})}
+                                      />
+                                    </div>
+
+                                    <div>
+                                      <label className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Transaction ID (UPI Ref)</label>
+                                      <input 
+                                        type="text" 
+                                        className="elite-input py-3" 
+                                        placeholder="UTR / Ref Number..."
+                                        id={`payout-ref-${sub.id}`}
+                                      />
+                                    </div>
+
+                                    <button 
+                                      onClick={() => {
+                                        const ref = document.getElementById(`payout-ref-${sub.id}`).value;
+                                        if (!ref) {
+                                          addToast('Please enter the UPI transaction reference.', 'warning');
+                                          return;
+                                        }
+                                        handleAcquire(sub.id, (sub.proposed_price || sub.price), ref);
+                                      }} 
+                                      className="btn-elite w-full py-4 text-[10px]"
+                                    >
+                                      PAID & POST TO SHOP
+                                    </button>
+                                  </div>
                                 </div>
                               ) : (
                                 <div className="flex flex-col gap-3">

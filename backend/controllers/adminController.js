@@ -136,6 +136,7 @@ async function getProductSubmissions(req, res) {
     const submissions = (products || []).map((product) => ({
       ...product,
       seller_email: sellerMetaById[product.seller_id]?.email || null,
+      seller_upi_id: sellerMetaById[product.seller_id]?.upi_id || null,
     }));
 
     return res.json({ submissions });
