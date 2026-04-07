@@ -75,20 +75,13 @@ async function getAnalytics(req, res) {
       0
     );
 
-    const totalListingFees = (products || [])
-      .filter((product) => Boolean(product.seller_id))
-      .reduce((sum, product) => sum + Number(product.listing_fee || 0), 0);
-
-    const totalSponsoredFees = (products || [])
-      .filter((product) => Boolean(product.seller_id) && Boolean(product.is_sponsored))
-      .reduce((sum, product) => sum + Number(product.sponsored_fee || 0), 0);
+    const totalSubmissions = products.filter(p => p.seller_id !== null).length;
 
     return res.json({
       totalRevenue,
       totalCommission,
       totalSellerPayout,
-      totalListingFees,
-      totalSponsoredFees,
+      totalSubmissions,
       totalOrders: orders.length,
       totalUsers: users.length,
       dailySales: dailySalesMap,

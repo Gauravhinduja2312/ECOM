@@ -8,7 +8,6 @@ import {
   preloadCartPage,
   preloadProductsPage,
   preloadSellProductPage,
-  preloadSellerPickupDashboard,
   preloadUserDashboardPage,
 } from '../utils/preloadRoutes';
 
@@ -80,24 +79,21 @@ export default function Navbar() {
           ) : profile ? (
             <>
               <Link
-                to="/sell"
+                to="/select-role"
+                className="inline-flex items-center gap-1 rounded-lg px-2.5 py-2 text-slate-700 transition hover:bg-slate-100 hover:text-slate-900 hover-lift sm:px-3"
+              >
+                <span>🔄</span>
+                <span className="hidden sm:inline">Switch</span>
+              </Link>
+              <Link
+                to="/seller/dashboard"
                 onMouseEnter={preloadSellProductPage}
                 onFocus={preloadSellProductPage}
                 onTouchStart={preloadSellProductPage}
                 className="inline-flex items-center gap-1 rounded-lg px-2.5 py-2 text-slate-700 transition hover:bg-violet-100/60 hover:text-violet-900 hover-lift sm:px-3"
               >
                 <span>📤</span>
-                <span className="hidden sm:inline">Sell</span>
-              </Link>
-              <Link
-                to="/seller/pickups"
-                onMouseEnter={preloadSellerPickupDashboard}
-                onFocus={preloadSellerPickupDashboard}
-                onTouchStart={preloadSellerPickupDashboard}
-                className="inline-flex items-center gap-1 rounded-lg px-2.5 py-2 text-slate-700 transition hover:bg-cyan-100/60 hover:text-cyan-900 hover-lift sm:px-3"
-              >
-                <span>📦</span>
-                <span className="hidden sm:inline">Pickups</span>
+                <span className="hidden sm:inline">Seller Portal</span>
               </Link>
               <Link
                 to="/dashboard"
@@ -107,7 +103,7 @@ export default function Navbar() {
                 className="inline-flex items-center gap-1 rounded-lg px-2.5 py-2 text-slate-700 transition hover:bg-green-100/60 hover:text-green-900 hover-lift sm:px-3"
               >
                 <span>👤</span>
-                <span className="hidden sm:inline">Dashboard</span>
+                <span className="hidden sm:inline">Buyer Dash</span>
               </Link>
             </>
           ) : null}

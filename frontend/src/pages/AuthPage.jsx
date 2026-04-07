@@ -146,7 +146,7 @@ export default function AuthPage() {
   }
 
   if (session && profile) {
-    return <Navigate to={profile.role === 'admin' ? '/admin' : '/dashboard'} replace />;
+    return <Navigate to={profile.role === 'admin' ? '/admin' : '/select-role'} replace />;
   }
 
   const handleSubmit = async (event) => {

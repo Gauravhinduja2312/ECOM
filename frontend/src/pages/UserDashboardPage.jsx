@@ -10,12 +10,11 @@ import { formatCurrency } from '../utils/format';
 export default function UserDashboardPage() {
   const { profile, session } = useAuth();
   const [orders, setOrders] = useState([]);
-  const [myListings, setMyListings] = useState([]);
-  const [notifications, setNotifications] = useState([]);
-  const [supportTickets, setSupportTickets] = useState([]);
-  const [myReturns, setMyReturns] = useState([]);
-  const [activeTab, setActiveTab] = useState('orders');
-  const [loading, setLoading] = useState(true);
+const [notifications, setNotifications] = useState([]);
+const [supportTickets, setSupportTickets] = useState([]);
+const [myReturns, setMyReturns] = useState([]);
+const [activeTab, setActiveTab] = useState('orders');
+const [loading, setLoading] = useState(true);
   
   // Modals / forms
   const [showTicketForm, setShowTicketForm] = useState(false);
@@ -29,14 +28,9 @@ export default function UserDashboardPage() {
 
     const fetchDashboardData = async () => {
       try {
-        const [ordersResult, notificationsResult, listingsResult, ticketsResult, returnsResult] = await Promise.all([
+        const [ordersResult, notificationsResult, ticketsResult, returnsResult] = await Promise.all([
           apiRequest('/api/payment/my-orders', 'GET', session.access_token),
           apiRequest('/api/notifications', 'GET', session.access_token),
-          supabase
-            .from('products')
-            .select('*')
-            .eq('seller_id', profile.id)
-            .order('id', { ascending: false }),
           supabase
             .from('support_tickets')
             .select('*')
@@ -55,7 +49,6 @@ export default function UserDashboardPage() {
 
         setOrders(ordersResult.orders || []);
         setNotifications(notificationsResult.notifications || []);
-        setMyListings(listingsResult.data || []);
         setSupportTickets(ticketsResult.data || []);
         setMyReturns(returnsResult.data || []);
       } catch {
@@ -64,7 +57,6 @@ export default function UserDashboardPage() {
         }
 
         setOrders([]);
-        setMyListings([]);
         setNotifications([]);
       } finally {
         if (isMounted) {
@@ -106,16 +98,6 @@ export default function UserDashboardPage() {
             schema: 'public',
             table: 'notifications',
             filter: `user_id=eq.${profile.id}`,
-          },
-          scheduleRefresh
-        )
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'products',
-            filter: `seller_id=eq.${profile.id}`,
           },
           scheduleRefresh
         )
@@ -220,7 +202,7 @@ export default function UserDashboardPage() {
     <section className="mx-auto max-w-5xl px-4 py-10 animate-fade-in-up">
       <h1 className="page-title inline-flex items-center gap-2 text-slate-900">
         <span className="icon-pill">👤</span>
-        User Dashboard
+        Account Dashboard
       </h1>
       <div className="mt-6 grid gap-4 md:grid-cols-2 stagger-children">
         <div className="rounded-2xl border border-slate-200 bg-white/95 p-5 shadow-sm hover-lift hover-glow">
@@ -264,17 +246,7 @@ export default function UserDashboardPage() {
           >
             Orders ({orders.length})
           </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('listings')}
-            className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
-              activeTab === 'listings'
-                ? 'bg-violet-100 text-violet-900 border border-violet-300'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-            }`}
-          >
-            Listings ({myListings.length})
-          </button>
+
           <button
             type="button"
             onClick={() => setActiveTab('notifications')}
@@ -336,23 +308,7 @@ export default function UserDashboardPage() {
               )}
             </div>
           </>
-        ) : activeTab === 'listings' ? (
-          <>
-            <h2 className="text-xl font-semibold text-slate-900">My Listings</h2>
-            <div className="mt-4 space-y-3">
-              {myListings.map((listing) => (
-                <div key={listing.id} className="rounded-xl border border-slate-200 bg-white p-3 transition hover:shadow-sm">
-                  <p className="font-medium text-slate-900">{listing.name}</p>
-                  <p className="text-sm text-slate-600">{formatCurrency(listing.price)} • Stock: {listing.stock}</p>
-                  <p className="text-sm text-slate-600">Category: {listing.category || 'General'}</p>
-                  <p className="text-sm text-slate-600">
-                    Status: <span className="font-medium capitalize">{listing.verification_status}</span>
-                  </p>
-                </div>
-              ))}
-              {myListings.length === 0 && <p className="text-sm text-slate-600">No listings yet.</p>}
-            </div>
-          </>
+
         ) : activeTab === 'notifications' ? (
           <>
             <h2 className="text-xl font-semibold text-slate-900">Notifications</h2>

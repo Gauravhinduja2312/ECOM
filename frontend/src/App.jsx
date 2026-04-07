@@ -1,11 +1,9 @@
 import { Suspense, lazy, useEffect } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
-import PerformanceMonitor from './components/PerformanceMonitor';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute';
 import {
-  preloadAddProductPage,
   preloadAdminDashboardPage,
   preloadAuthPage,
   preloadCartPage,
@@ -16,7 +14,6 @@ import {
   preloadProductDetailPage,
   preloadProductsPage,
   preloadSellProductPage,
-  preloadSellerPickupDashboard,
   preloadUserDashboardPage,
   warmLikelyRoutes,
 } from './utils/preloadRoutes';
@@ -30,9 +27,9 @@ const CheckoutPage = lazy(preloadCheckoutPage);
 const OrderSuccessPage = lazy(preloadOrderSuccessPage);
 const UserDashboardPage = lazy(preloadUserDashboardPage);
 const AdminDashboardPage = lazy(preloadAdminDashboardPage);
-const AddProductPage = lazy(preloadAddProductPage);
 const SellProductPage = lazy(preloadSellProductPage);
-const SellerPickupDashboard = lazy(preloadSellerPickupDashboard);
+const RoleSelectionPage = lazy(() => import('./pages/RoleSelectionPage'));
+const SellerPortalPage = lazy(() => import('./pages/SellProductPage')); // Reusing SellProductPage as transition
 const NotFoundPage = lazy(preloadNotFoundPage);
 
 function RouteLoader() {
@@ -62,7 +59,6 @@ function App() {
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.14),_transparent_45%),linear-gradient(180deg,#f8fafc_0%,#eef2ff_100%)] text-slate-900">
-      <PerformanceMonitor />
       <Navbar />
       <main>
         <Suspense fallback={<RouteLoader />}>
@@ -99,6 +95,14 @@ function App() {
               }
             />
             <Route
+              path="/select-role"
+              element={
+                <ProtectedRoute>
+                  <RoleSelectionPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/dashboard"
               element={
                 <ProtectedRoute>
@@ -107,20 +111,20 @@ function App() {
               }
             />
             <Route
-              path="/sell"
+              path="/seller/dashboard"
               element={
                 <ProtectedRoute>
-                  <SellProductPage />
+                  <SellerPortalPage />
                 </ProtectedRoute>
               }
             />
             <Route
+              path="/sell"
+              element={<Navigate to="/seller/dashboard" replace />}
+            />
+            <Route
               path="/seller/pickups"
-              element={
-                <ProtectedRoute>
-                  <SellerPickupDashboard />
-                </ProtectedRoute>
-              }
+              element={<Navigate to="/dashboard" replace />}
             />
             <Route
               path="/admin"
@@ -132,11 +136,7 @@ function App() {
             />
             <Route
               path="/admin/add-product"
-              element={
-                <AdminRoute>
-                  <AddProductPage />
-                </AdminRoute>
-              }
+              element={<Navigate to="/admin" replace />}
             />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>

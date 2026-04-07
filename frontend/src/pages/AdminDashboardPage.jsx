@@ -378,17 +378,17 @@ export default function AdminDashboardPage() {
     }));
   };
 
-  const handleAcquire = async (submissionId) => {
+  const handleAcquire = async (submissionId, defaultPrice) => {
     try {
       setAcquireLoadingId(submissionId);
-      const finalPrice = acquireDrafts[submissionId];
+      const finalPrice = acquireDrafts[submissionId] ?? defaultPrice;
 
       if (!finalPrice || isNaN(finalPrice)) {
         alert("Please enter a valid retail price");
         return;
       }
 
-      await apiRequest(`/api/products/admin/${submissionId}/acquire`, 'PATCH', session.access_token, {
+      await apiRequest(`/api/admin/products/${submissionId}/acquire`, 'PATCH', session.access_token, {
         finalPrice: Number(finalPrice)
       });
 
@@ -419,12 +419,6 @@ export default function AdminDashboardPage() {
           <span className="icon-pill">⚙️</span>
           Admin Dashboard
         </h1>
-        <Link
-          to="/admin/add-product"
-          className="btn-gradient rounded-lg px-4 py-2 font-medium"
-        >
-          + Add Product
-        </Link>
       </div>
 
       {analytics && (
@@ -434,20 +428,16 @@ export default function AdminDashboardPage() {
             <p className="text-2xl font-bold text-indigo-700">{formatCurrency(analytics.totalRevenue)}</p>
           </div>
           <div className="rounded-2xl border border-slate-200 bg-white/95 p-5 shadow-sm hover-lift hover-glow">
-            <p className="text-sm text-slate-500">Total Commission</p>
-            <p className="text-2xl font-bold text-violet-700">{formatCurrency(analytics.totalCommission || 0)}</p>
+            <p className="text-sm text-slate-500">Net Profit</p>
+            <p className="text-2xl font-bold text-violet-700">{formatCurrency((analytics.totalRevenue || 0) - (analytics.totalSellerPayout || 0))}</p>
           </div>
           <div className="rounded-2xl border border-slate-200 bg-white/95 p-5 shadow-sm hover-lift hover-glow">
-            <p className="text-sm text-slate-500">Seller Payout</p>
+            <p className="text-sm text-slate-500">Acquisition Costs</p>
             <p className="text-2xl font-bold text-emerald-700">{formatCurrency(analytics.totalSellerPayout || 0)}</p>
           </div>
           <div className="rounded-2xl border border-slate-200 bg-white/95 p-5 shadow-sm hover-lift hover-glow">
-            <p className="text-sm text-slate-500">Listing Fees</p>
-            <p className="text-2xl font-bold text-amber-700">{formatCurrency(analytics.totalListingFees || 0)}</p>
-          </div>
-          <div className="rounded-2xl border border-slate-200 bg-white/95 p-5 shadow-sm hover-lift hover-glow">
-            <p className="text-sm text-slate-500">Sponsored Fees</p>
-            <p className="text-2xl font-bold text-fuchsia-700">{formatCurrency(analytics.totalSponsoredFees || 0)}</p>
+            <p className="text-sm text-slate-500">Student Submissions</p>
+            <p className="text-2xl font-bold text-amber-700">{analytics.totalSubmissions || 0}</p>
           </div>
           <div className="rounded-2xl border border-slate-200 bg-white/95 p-5 shadow-sm hover-lift hover-glow">
             <p className="text-sm text-slate-500">Total Orders</p>
@@ -507,7 +497,7 @@ export default function AdminDashboardPage() {
                 : 'border-transparent text-slate-600 hover:text-slate-900'
             }`}
           >
-            💸 Payouts
+            💰 Revenue
           </button>
           <button
             onClick={() => setActiveTab('users')}
@@ -660,7 +650,7 @@ export default function AdminDashboardPage() {
                               <button
                                 type="button"
                                 disabled={acquireLoadingId === submission.id}
-                                onClick={() => handleAcquire(submission.id)}
+                                onClick={() => handleAcquire(submission.id, submission.price)}
                                 className="btn-gradient px-4 py-2 text-sm"
                               >
                                 {acquireLoadingId === submission.id ? 'Acquiring...' : 'Take Ownership & Make Live'}
@@ -819,18 +809,19 @@ export default function AdminDashboardPage() {
         {/* Payouts Tab */}
         {activeTab === 'payouts' && (
           <div className="p-5 space-y-4">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-              <h2 className="text-xl font-semibold text-slate-900">Seller Payout Report</h2>
-              <p className="mt-1 text-sm text-slate-600">Track unpaid seller earnings and mark payouts as settled.</p>
-              </div>
+            <div>
+              <h2 className="text-xl font-semibold text-slate-900">Revenue & Acquisition Report</h2>
+              <p className="mt-1 text-sm text-slate-600">Track platform revenue from B2C sales and student acquisition costs paid externally.</p>
+            </div>
+            <div className="flex flex-wrap items-center justify-between gap-3 pb-2">
+              <div className="text-xs text-slate-500">External student payouts are tracked here. Use this to reconcile B2C acquisition records.</div>
               <button
                 type="button"
                 disabled={sellerPayouts.length === 0}
                 onClick={handleDownloadPayoutReport}
                 className="rounded-lg border border-slate-300 bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-200 disabled:opacity-60"
               >
-                ⬇️ Download Payout CSV
+                ⬇️ Download CSV
               </button>
             </div>
 
