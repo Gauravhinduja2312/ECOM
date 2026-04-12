@@ -50,6 +50,9 @@ async function verifyAndCreateOrder(req, res) {
       userId,
       pickupLocation,
       pickupTime,
+      deliveryFee = 0,
+      deliveryMethod,
+      deliveryAddress,
     } = req.body;
 
     if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
@@ -170,7 +173,8 @@ async function verifyAndCreateOrder(req, res) {
       });
     }
 
-    const normalizedComputedTotal = Number(computedTotal.toFixed(2));
+    const normalizedDeliveryFee = Number(deliveryFee) || 0;
+    const normalizedComputedTotal = Number((computedTotal + normalizedDeliveryFee).toFixed(2));
     const normalizedRequestedTotal = Number(Number(total).toFixed(2));
 
     if (Math.abs(normalizedComputedTotal - normalizedRequestedTotal) > 1) {
@@ -186,7 +190,9 @@ async function verifyAndCreateOrder(req, res) {
         total_price: normalizedComputedTotal,
         status: 'order_placed',
         pickup_location: normalizedPickupLocation,
-        pickup_time: normalizedPickupTime.toISOString(),
+        pickup_time: normalizedPickupTime ? normalizedPickupTime.toISOString() : null,
+        delivery_fee: normalizedDeliveryFee,
+        delivery_address: deliveryAddress || null,
         status_updated_at: new Date().toISOString(),
       })
       .select('*')

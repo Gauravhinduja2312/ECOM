@@ -73,6 +73,7 @@ export default function UserDashboardPage() {
   const { profile, session } = useAuth();
   const { addToast } = useToast();
   const [orders, setOrders] = useState([]);
+  const [submissions, setSubmissions] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [supportTickets, setSupportTickets] = useState([]);
   const [activeTab, setActiveTab] = useState('orders');
@@ -81,20 +82,25 @@ export default function UserDashboardPage() {
   const [ticketSubject, setTicketSubject] = useState('');
   const [ticketDescription, setTicketDescription] = useState('');
   const [submittingTicket, setSubmittingTicket] = useState(false);
+  const [rescheduleSubmissionId, setRescheduleSubmissionId] = useState(null);
+  const [rescheduleDraft, setRescheduleDraft] = useState({ time: '', location: '' });
+  const [submittingReschedule, setSubmittingReschedule] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
     const fetchData = async () => {
       try {
-        const [ordersRes, notificationsRes, ticketsRes] = await Promise.all([
+        const [ordersRes, notificationsRes, ticketsRes, submissionsRes] = await Promise.all([
           apiRequest('/api/payment/my-orders', 'GET', session.access_token),
           apiRequest('/api/notifications', 'GET', session.access_token),
           supabase.from('support_tickets').select('*').eq('user_id', profile.id).order('created_at', { ascending: false }),
+          supabase.from('products').select('*').eq('seller_id', profile.id).order('created_at', { ascending: false }),
         ]);
         if (isMounted) {
           setOrders(ordersRes.orders || []);
           setNotifications(notificationsRes.notifications || []);
           setSupportTickets(ticketsRes.data || []);
+          setSubmissions(submissionsRes.data || []);
         }
       } catch (err) {
         console.error('Fetch error:', err);
@@ -151,6 +157,28 @@ export default function UserDashboardPage() {
       addToast('Failed to send request.', 'error');
     } finally {
       setSubmittingTicket(false);
+    }
+  };
+
+  const handleRescheduleHandover = async (productId) => {
+    setSubmittingReschedule(true);
+    try {
+      if (!rescheduleDraft.time) throw new Error('Time is required');
+      
+      await apiRequest(`/api/products/${productId}/handover`, 'PATCH', session.access_token, {
+        pickupTime: rescheduleDraft.time,
+        pickupLocation: rescheduleDraft.location
+      });
+      
+      addToast('Handover updated successfully.', 'success');
+      setRescheduleSubmissionId(null);
+      // Refresh submissions
+      const { data } = await supabase.from('products').select('*').eq('seller_id', profile.id).order('created_at', { ascending: false });
+      setSubmissions(data);
+    } catch (err) {
+      addToast(err.message || 'Failed to reschedule.', 'error');
+    } finally {
+      setSubmittingReschedule(false);
     }
   };
 
@@ -218,7 +246,7 @@ export default function UserDashboardPage() {
           </div>
 
           <div className="lg:col-span-6 glass-card px-8 flex items-center gap-10">
-            {['orders', 'notifications', 'support', 'profile'].map((tab) => (
+            {['orders', 'submissions', 'notifications', 'support', 'profile'].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -246,6 +274,129 @@ export default function UserDashboardPage() {
                   <h3 className="text-2xl font-black text-white uppercase tracking-tighter mb-4">No active orders</h3>
                   <p className="text-slate-500 text-sm mb-10 max-w-xs mx-auto uppercase tracking-widest font-black">Browse the shop to place your first order.</p>
                   <a href="/products" className="btn-elite text-[9px] inline-block px-10">Shop Now</a>
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'submissions' && (
+            <div className="space-y-8">
+              {submissions.length > 0 ? (
+                submissions.map(sub => {
+                  const apptTime = sub.seller_pickup_time ? new Date(sub.seller_pickup_time).getTime() : null;
+                  const now = Date.now();
+                  const isTooClose = apptTime && apptTime - now < 2 * 60 * 60 * 1000 && apptTime > now;
+
+                  return (
+                    <div key={sub.id} className="glass-card p-10 group overflow-hidden relative">
+                      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 mb-8">
+                        <div>
+                          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-400 mb-2">Ref: {sub.id}</p>
+                          <h4 className="text-2xl font-black text-white tracking-tighter uppercase mb-1">{sub.name}</h4>
+                          <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest ${
+                            sub.verification_status === 'verified' ? 'bg-emerald-500/10 text-emerald-400' :
+                            sub.verification_status === 'rejected' ? 'bg-rose-500/10 text-rose-400' :
+                            'bg-amber-500/10 text-amber-400'
+                          }`}>{sub.verification_status}</span>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Handover Status</p>
+                          <p className={`text-lg font-black uppercase tracking-widest ${
+                            sub.handover_status === 'confirmed' ? 'text-emerald-400' :
+                            sub.handover_status === 'rescheduled' ? 'text-indigo-400' :
+                            'text-amber-400'
+                          }`}>{sub.handover_status}</p>
+                        </div>
+                      </div>
+
+                      <div className="grid md:grid-cols-3 gap-8 py-8 border-y border-white/5">
+                        <div>
+                          <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Proposed Time</p>
+                          <p className="text-sm font-bold text-white uppercase tracking-widest">{sub.seller_pickup_time ? new Date(sub.seller_pickup_time).toLocaleString() : 'Not set'}</p>
+                        </div>
+                        <div>
+                          <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Proposed Location</p>
+                          <p className="text-sm font-bold text-white uppercase tracking-widest">{sub.seller_pickup_location || 'Not set'}</p>
+                        </div>
+                        <div>
+                          <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Current Valuation</p>
+                          <p className="text-sm font-bold text-indigo-400">{formatCurrency(sub.price)}</p>
+                        </div>
+                      </div>
+
+                      <div className="mt-8 flex flex-col md:flex-row gap-4">
+                        {rescheduleSubmissionId === sub.id ? (
+                          <div className="flex-1 p-6 bg-white/5 rounded-2xl border border-white/10 space-y-4">
+                            <div className="grid md:grid-cols-2 gap-4">
+                              <div>
+                                <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-2 block">New Time</label>
+                                <input 
+                                  type="datetime-local" 
+                                  className="elite-input py-2 text-xs" 
+                                  value={rescheduleDraft.time}
+                                  onChange={e => setRescheduleDraft({...rescheduleDraft, time: e.target.value})}
+                                />
+                              </div>
+                              <div>
+                                <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-2 block">New Location</label>
+                                <input 
+                                  placeholder="Location..."
+                                  className="elite-input py-2 text-xs"
+                                  value={rescheduleDraft.location}
+                                  onChange={e => setRescheduleDraft({...rescheduleDraft, location: e.target.value})}
+                                />
+                              </div>
+                            </div>
+                            <div className="flex gap-2">
+                              <button 
+                                onClick={() => handleRescheduleHandover(sub.id)}
+                                disabled={submittingReschedule}
+                                className="btn-elite flex-1 py-3 text-[9px]"
+                              >
+                                {submittingReschedule ? 'UPDATING...' : 'CONFIRM UPDATE'}
+                              </button>
+                              <button 
+                                onClick={() => setRescheduleSubmissionId(null)}
+                                className="px-6 py-3 rounded-xl border border-white/10 text-[9px] font-black uppercase text-slate-400"
+                              >
+                                CANCEL
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <button 
+                            disabled={isTooClose}
+                            onClick={() => {
+                              setRescheduleSubmissionId(sub.id);
+                              setRescheduleDraft({
+                                time: sub.seller_pickup_time ? new Date(sub.seller_pickup_time).toISOString().slice(0, 16) : '',
+                                location: sub.seller_pickup_location || ''
+                              });
+                            }}
+                            className="flex-1 btn-elite py-4 text-[9px] tracking-widest uppercase disabled:opacity-20"
+                          >
+                            Reschedule Appointment
+                          </button>
+                        )}
+                        
+                        <div className="flex-1 p-4 bg-indigo-500/5 rounded-2xl border border-indigo-500/10">
+                          <p className="text-[10px] font-medium text-slate-400 leading-relaxed">
+                            {isTooClose ? (
+                              <span className="text-rose-400 font-bold">LOCKED: Appointments cannot be changed less than 2 hours before the scheduled time.</span>
+                            ) : (
+                              <span>Note: You can reschedule this handover up to 2 hours before the appointment. Admin must confirm all new times.</span>
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="py-20 text-center glass-card border-dashed border-white/5 opacity-60">
+                  <div className="text-6xl mb-8">📤</div>
+                  <h3 className="text-2xl font-black text-white uppercase tracking-tighter mb-4">No submissions yet</h3>
+                  <a href="/add-product" className="btn-elite text-[9px] inline-block px-10">Post Submission</a>
                 </div>
               )}
             </div>

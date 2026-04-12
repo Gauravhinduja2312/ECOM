@@ -13,6 +13,8 @@ const emptyProduct = {
   category: '',
   image_url: '',
   stock: '',
+  seller_pickup_location: 'Main Gate',
+  seller_pickup_time: '',
 };
 
 export default function AddProductPage() {
@@ -91,6 +93,8 @@ export default function AddProductPage() {
       category: product.category,
       image_url: product.image_url,
       stock: String(product.stock),
+      seller_pickup_location: product.seller_pickup_location || 'Main Gate',
+      seller_pickup_time: product.seller_pickup_time ? new Date(product.seller_pickup_time).toISOString().slice(0, 16) : '',
     });
     window.scrollTo(0, 0);
   };
@@ -191,14 +195,44 @@ export default function AddProductPage() {
               </div>
             </div>
 
+            <div className="grid grid-cols-2 gap-6">
+              <div>
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Domain Category</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Fulfillment Category..."
+                  value={productForm.category}
+                  onChange={(event) => setProductForm((prev) => ({ ...prev, category: event.target.value }))}
+                  className="elite-input"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Handover Location (to Admin)</label>
+                <select
+                  required
+                  value={productForm.seller_pickup_location}
+                  onChange={(event) => setProductForm((prev) => ({ ...prev, seller_pickup_location: event.target.value }))}
+                  className="elite-input"
+                >
+                  <option value="Main Gate">Main Gate</option>
+                  <option value="Canteen">Canteen</option>
+                  <option value="Library">Library</option>
+                  <option value="Reception">Reception</option>
+                  <option value="Auditorium">Auditorium</option>
+                  <option value="Hostel A">Hostel A</option>
+                  <option value="Hostel B">Hostel B</option>
+                </select>
+              </div>
+            </div>
+
             <div>
-              <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Domain Category</label>
+              <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Preferred Handover Time</label>
               <input
-                type="text"
+                type="datetime-local"
                 required
-                placeholder="Fulfillment Category..."
-                value={productForm.category}
-                onChange={(event) => setProductForm((prev) => ({ ...prev, category: event.target.value }))}
+                value={productForm.seller_pickup_time}
+                onChange={(event) => setProductForm((prev) => ({ ...prev, seller_pickup_time: event.target.value }))}
                 className="elite-input"
               />
             </div>

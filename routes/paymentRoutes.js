@@ -18,6 +18,8 @@ router.post('/verify-and-create-order', requireAuth, verifyPaymentLimiter, verif
 router.get('/my-orders', requireAuth, getMyOrdersWithFulfillment);
 router.get('/orders/:orderId', requireAuth, getOrderDetails);
 router.patch('/orders/:orderId/status', requireAuth, updateOrderStatus);
+router.patch('/orders/:orderId/reschedule', requireAuth, rescheduleOrder);
+router.post('/orders/return', requireAuth, initiateReturn);
 
 // Seller endpoints
 router.get('/seller-orders', requireAuth, getSellerOrders);

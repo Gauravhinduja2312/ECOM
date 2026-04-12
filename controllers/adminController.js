@@ -97,7 +97,7 @@ async function getProductSubmissions(req, res) {
   try {
     const { data: products, error: productsError } = await supabaseAdmin
       .from('products')
-      .select('id, name, description, price, category, stock, seller_id, verification_status, admin_review_note, proposed_price, price_offer_status, final_price, commission_rate, listing_number, listing_fee, is_sponsored, sponsored_fee, sponsored_until, created_at, updated_at')
+      .select('id, name, description, price, category, stock, seller_id, verification_status, admin_review_note, proposed_price, price_offer_status, final_price, commission_rate, listing_number, listing_fee, is_sponsored, sponsored_fee, sponsored_until, created_at, updated_at, seller_pickup_location, seller_pickup_time, handover_status')
       .not('seller_id', 'is', null)
       .order('verification_status', { ascending: false })
       .order('created_at', { ascending: false });
@@ -142,7 +142,7 @@ async function reviewProductSubmission(req, res) {
       return res.status(400).json({ error: 'Invalid product id' });
     }
 
-    if (!['verify', 'reject', 'counter'].includes(action)) {
+    if (!['verify', 'reject', 'counter', 'confirm_handover', 'reschedule_handover'].includes(action)) {
       return res.status(400).json({ error: 'Invalid action' });
     }
 
@@ -169,6 +169,19 @@ async function reviewProductSubmission(req, res) {
     const payload = {
       updated_at: new Date().toISOString(),
     };
+
+    // 2-hour safety window check for rescheduling/confirming
+    if (['confirm_handover', 'reschedule_handover', 'reject'].includes(action)) {
+      if (product.seller_pickup_time) {
+        const appointmentTime = new Date(product.seller_pickup_time).getTime();
+        const now = Date.now();
+        const twoHoursInMs = 2 * 60 * 60 * 1000;
+        
+        if (appointmentTime - now < twoHoursInMs && appointmentTime > now) {
+          return res.status(400).json({ error: 'Cannot modify handover schedule less than 2 hours before the appointment' });
+        }
+      }
+    }
 
     if (commissionRate !== undefined && commissionRate !== null && commissionRate !== '') {
       const rate = Number(commissionRate);
@@ -210,7 +223,23 @@ async function reviewProductSubmission(req, res) {
     if (action === 'reject') {
       payload.verification_status = 'rejected';
       payload.price_offer_status = 'rejected';
+      payload.handover_status = 'rejected';
       payload.admin_review_note = note || 'Product rejected by admin';
+    }
+
+    if (action === 'confirm_handover') {
+      payload.handover_status = 'confirmed';
+      payload.admin_review_note = note || 'Handover appointment confirmed by admin';
+    }
+
+    if (action === 'reschedule_handover') {
+      const { newTime, newLocation } = req.body;
+      if (!newTime) return res.status(400).json({ error: 'New time is required for rescheduling' });
+      
+      payload.seller_pickup_time = new Date(newTime).toISOString();
+      if (newLocation) payload.seller_pickup_location = newLocation;
+      payload.handover_status = 'rescheduled';
+      payload.admin_review_note = note || 'Admin proposed a new handover time/location';
     }
 
     const { data: updatedProduct, error: updateError } = await supabaseAdmin

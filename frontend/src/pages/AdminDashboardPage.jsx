@@ -42,6 +42,7 @@ export default function AdminDashboardPage() {
   const [payoutReferenceDrafts, setPayoutReferenceDrafts] = useState({});
   const [payoutProcessingSellerId, setPayoutProcessingSellerId] = useState(null);
   const [orderStatusProcessingId, setOrderStatusProcessingId] = useState(null);
+  const [handoverRescheduleDrafts, setHandoverRescheduleDrafts] = useState({});
   const [loading, setLoading] = useState(true);
 
   const fetchAdminData = async () => {
@@ -316,15 +317,28 @@ export default function AdminDashboardPage() {
                               'bg-amber-500/10 text-amber-400'
                             }`}>{sub.verification_status}</span>
                           </div>
-                          <p className="text-xs text-slate-500 font-medium truncate mb-4">Seller: {sub.seller_email}</p>
-                          <div className="flex gap-6">
+                          <p className="text-xs text-slate-500 font-medium truncate mb-2">Seller: {sub.seller_email}</p>
+                          <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                            <span>📍 Handover:</span> {sub.seller_pickup_location || 'Not Specified'}
+                          </p>
+                          <div className="flex flex-wrap gap-6">
                             <div>
                               <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">Valuation</p>
                               <p className="text-sm font-black text-white">{formatCurrency(sub.price)}</p>
                             </div>
                             <div>
-                              <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">Buyout Offer</p>
-                              <p className="text-sm font-black text-indigo-400">{sub.proposed_price ? formatCurrency(sub.proposed_price) : 'N/A'}</p>
+                              <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">Handover Appointment</p>
+                              <div className="flex items-center gap-2">
+                                <p className={`text-xs font-black uppercase tracking-widest ${
+                                  sub.handover_status === 'confirmed' ? 'text-emerald-400' :
+                                  sub.handover_status === 'rescheduled' ? 'text-indigo-400' :
+                                  sub.handover_status === 'rejected' ? 'text-rose-400' :
+                                  'text-amber-400'
+                                }`}>
+                                  {sub.seller_pickup_time ? new Date(sub.seller_pickup_time).toLocaleString() : 'Not Scheduled'}
+                                </p>
+                                <span className="text-[10px] opacity-40 capitalize">({sub.handover_status})</span>
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -378,18 +392,78 @@ export default function AdminDashboardPage() {
                                   </div>
                                 </div>
                               ) : (
-                                <div className="flex flex-col gap-3">
-                                  <div className="flex gap-3">
+                                <div className="flex flex-col gap-3 min-w-[300px]">
+                                  <div className="p-4 rounded-2xl bg-white/5 border border-white/5 space-y-4">
+                                    <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-500">Handover Negotiation</h4>
+                                    
+                                    {sub.seller_pickup_time && (() => {
+                                      const apptTime = new Date(sub.seller_pickup_time).getTime();
+                                      const now = Date.now();
+                                      const isTooClose = apptTime - now < 2 * 60 * 60 * 1000 && apptTime > now;
+                                      
+                                      return (
+                                        <div className="flex flex-col gap-3">
+                                          {sub.handover_status !== 'confirmed' && (
+                                            <button 
+                                              disabled={isTooClose}
+                                              onClick={() => handleHandoverAction(sub.id, 'confirm_handover')} 
+                                              className="btn-elite w-full py-3 text-[9px] bg-emerald-600 border-emerald-500/20 disabled:opacity-20"
+                                            >
+                                              CONFIRM APPOINTMENT
+                                            </button>
+                                          )}
+                                          
+                                          <div className="space-y-2">
+                                            <p className="text-[8px] font-black uppercase text-slate-600">Propose New Time/Place</p>
+                                            <input 
+                                              type="datetime-local" 
+                                              className="elite-input text-xs py-2"
+                                              value={handoverRescheduleDrafts[sub.id]?.newTime || ''}
+                                              onChange={(e) => setHandoverRescheduleDrafts({...handoverRescheduleDrafts, [sub.id]: {...handoverRescheduleDrafts[sub.id], newTime: e.target.value}})}
+                                            />
+                                            <input 
+                                              type="text" 
+                                              placeholder="Alternate Location..."
+                                              className="elite-input text-xs py-2"
+                                              value={handoverRescheduleDrafts[sub.id]?.newLocation || ''}
+                                              onChange={(e) => setHandoverRescheduleDrafts({...handoverRescheduleDrafts, [sub.id]: {...handoverRescheduleDrafts[sub.id], newLocation: e.target.value}})}
+                                            />
+                                            <button 
+                                              disabled={isTooClose}
+                                              onClick={() => handleHandoverAction(sub.id, 'reschedule_handover', { 
+                                                newTime: handoverRescheduleDrafts[sub.id]?.newTime,
+                                                newLocation: handoverRescheduleDrafts[sub.id]?.newLocation
+                                              })} 
+                                              className="btn-elite w-full py-3 text-[9px] disabled:opacity-20"
+                                            >
+                                              SUGGEST UPDATE
+                                            </button>
+                                          </div>
+
+                                          <button 
+                                            disabled={isTooClose}
+                                            onClick={() => handleHandoverAction(sub.id, 'reject')} 
+                                            className="text-[9px] font-black text-slate-600 hover:text-rose-500 uppercase tracking-widest transition disabled:opacity-20"
+                                          >
+                                            Reject Appointment
+                                          </button>
+
+                                          {isTooClose && <p className="text-[8px] font-bold text-rose-500 uppercase tracking-widest text-center mt-2">Locked: Less than 2h remaining</p>}
+                                        </div>
+                                      );
+                                    })()}
+                                  </div>
+                                  
+                                  <div className="flex gap-2">
                                     <input 
                                       type="number" 
-                                      className="elite-input w-32 py-3" 
-                                      placeholder="Offer ₹"
+                                      className="elite-input w-24 py-3" 
+                                      placeholder="Final ₹"
                                       value={draft.proposedPrice}
                                       onChange={(e) => setReviewDrafts({...reviewDrafts, [sub.id]: {...draft, proposedPrice: e.target.value}})}
                                     />
-                                    <button onClick={() => handleReview(sub.id, 'counter')} className="btn-elite px-6 py-3 text-[10px]">SEND OFFER</button>
+                                    <button onClick={() => handleReview(sub.id, 'counter')} className="btn-elite flex-1 py-3 text-[9px]">COUNTER OFFER</button>
                                   </div>
-                                  <button onClick={() => handleReview(sub.id, 'reject')} className="text-[9px] font-black text-slate-600 hover:text-rose-500 uppercase tracking-widest transition">Reject Item</button>
                                 </div>
                               )}
                             </>
@@ -407,12 +481,12 @@ export default function AdminDashboardPage() {
                 {orders.length === 0 ? <p className="text-center text-slate-500 font-black uppercase tracking-widest py-20">No orders found</p> : (
                   orders.map((order) => (
                     <div key={order.id} className="glass-card p-8 flex flex-col md:flex-row justify-between items-center gap-8">
-                      <div>
+                      <div className="flex-1">
                         <div className="flex items-center gap-4 mb-4">
                           <h3 className="text-lg font-black uppercase tracking-tighter">Order #{order.id.slice(0,8)}</h3>
                           <span className="px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-400 text-[8px] font-black uppercase tracking-widest">{order.status.replace('_', ' ')}</span>
                         </div>
-                        <div className="grid grid-cols-2 gap-8">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
                           <div>
                             <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">Volume</p>
                             <p className="text-sm font-black text-white">{formatCurrency(order.total_price)}</p>
@@ -420,6 +494,12 @@ export default function AdminDashboardPage() {
                           <div>
                             <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">Timestamp</p>
                             <p className="text-xs text-slate-400">{new Date(order.created_at).toLocaleDateString()}</p>
+                          </div>
+                          <div className="col-span-2">
+                            <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">Logistics Detail</p>
+                            <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">
+                              {order.pickup_location ? `📍 ${order.pickup_location} @ ${new Date(order.pickup_time).toLocaleString()}` : `🏠 ${order.delivery_address || 'Home Delivery'}`}
+                            </p>
                           </div>
                         </div>
                       </div>

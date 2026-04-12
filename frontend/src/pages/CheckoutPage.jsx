@@ -23,6 +23,7 @@ export default function CheckoutPage() {
   const { items, clearCart } = useCart();
   const { addToast } = useToast();
   const navigate = useNavigate();
+  const DELIVERY_FEE = 20;
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [pickupLocation, setPickupLocation] = useState('Main Gate');
@@ -30,10 +31,13 @@ export default function CheckoutPage() {
   const [deliveryMethod, setDeliveryMethod] = useState('pickup'); // 'pickup' or 'delivery'
   const [homeAddress, setHomeAddress] = useState('');
 
-  const total = items.reduce(
+  const subtotal = items.reduce(
     (sum, item) => sum + Number(item.products?.price || 0) * Number(item.quantity),
     0
   );
+
+  const appliedDeliveryFee = deliveryMethod === 'delivery' ? DELIVERY_FEE : 0;
+  const total = subtotal + appliedDeliveryFee;
 
   const handlePayment = async () => {
     setError('');
@@ -104,6 +108,8 @@ export default function CheckoutPage() {
                 ...response,
                 items: payloadItems,
                 total,
+                subtotal,
+                deliveryFee: appliedDeliveryFee,
                 userId: profile.id,
                 deliveryMethod,
                 pickupLocation: deliveryMethod === 'pickup' ? pickupLocation.trim() : null,
@@ -262,14 +268,18 @@ export default function CheckoutPage() {
            <div className="space-y-6">
             <div className="glass-card p-8 bg-indigo-600/[0.03]">
               <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-6">Order Summary</h3>
-              <div className="space-y-4 mb-8">
+               <div className="space-y-4 mb-8">
                  <div className="flex justify-between items-center text-sm">
                   <span className="text-slate-400 font-bold uppercase tracking-widest text-[9px]">Subtotal</span>
-                  <span className="font-black text-white">{formatCurrency(total)}</span>
+                  <span className="font-black text-white">{formatCurrency(subtotal)}</span>
                 </div>
                  <div className="flex justify-between items-center text-sm">
                   <span className="text-slate-400 font-bold uppercase tracking-widest text-[9px]">Delivery Fee</span>
-                  <span className="font-black text-emerald-400 uppercase tracking-widest text-[10px]">FREE</span>
+                  {appliedDeliveryFee > 0 ? (
+                    <span className="font-black text-indigo-400">{formatCurrency(appliedDeliveryFee)}</span>
+                  ) : (
+                    <span className="font-black text-emerald-400 uppercase tracking-widest text-[10px]">FREE</span>
+                  )}
                 </div>
                  <div className="pt-4 border-t border-white/5 flex justify-between items-center">
                   <span className="text-white font-black uppercase tracking-widest text-[10px]">Total Amount</span>

@@ -35,6 +35,9 @@ create table if not exists public.products (
   image_url text,
   stock integer not null default 0 check (stock >= 0),
   seller_id uuid references public.users(id) on delete set null,
+  seller_pickup_location text,
+  seller_pickup_time timestamptz,
+  handover_status text not null default 'pending' check (handover_status in ('pending', 'confirmed', 'rescheduled', 'rejected')),
   verification_status text not null default 'pending' check (verification_status in ('pending', 'verified', 'rejected')),
   admin_review_note text,
   proposed_price numeric(10,2) check (proposed_price is null or proposed_price >= 0),
@@ -58,6 +61,9 @@ alter table public.products add column if not exists final_price numeric(10,2) c
 alter table public.products add column if not exists commission_rate numeric(5,2) not null default 10 check (commission_rate >= 0 and commission_rate <= 100);
 alter table public.products add column if not exists listing_number integer check (listing_number is null or listing_number > 0);
 alter table public.products add column if not exists listing_fee numeric(10,2) not null default 0 check (listing_fee >= 0);
+alter table public.products add column if not exists seller_pickup_location text;
+alter table public.products add column if not exists seller_pickup_time timestamptz;
+alter table public.products add column if not exists handover_status text not null default 'pending';
 alter table public.products add column if not exists is_sponsored boolean not null default false;
 alter table public.products add column if not exists sponsored_fee numeric(10,2) not null default 0 check (sponsored_fee >= 0);
 alter table public.products add column if not exists sponsored_until timestamptz;
@@ -161,6 +167,7 @@ create table if not exists public.orders (
   status text not null default 'order_placed' check (status in ('order_placed', 'processing', 'ready_for_pickup', 'shipped', 'completed')),
   pickup_location text,
   pickup_time timestamptz,
+  delivery_fee numeric(10,2) not null default 0 check (delivery_fee >= 0),
   status_updated_at timestamptz not null default now(),
   created_at timestamptz not null default now()
 );
@@ -168,6 +175,8 @@ create table if not exists public.orders (
 -- Add missing columns to orders if they don't exist
 alter table public.orders add column if not exists pickup_location text;
 alter table public.orders add column if not exists pickup_time timestamptz;
+alter table public.orders add column if not exists delivery_fee numeric(10,2) not null default 0;
+alter table public.orders add column if not exists delivery_address text;
 alter table public.orders add column if not exists status_updated_at timestamptz not null default now();
 
 create table if not exists public.order_items (
@@ -196,6 +205,8 @@ create table if not exists public.order_logistics (
   id bigint generated always as identity primary key,
   order_id bigint not null references public.orders(id) on delete cascade,
   seller_id uuid references public.users(id) on delete set null,
+  seller_pickup_location text,
+  listing_number integer,
   pickup_location text not null,
   pickup_time timestamptz not null,
   pickup_confirmed_at timestamptz,

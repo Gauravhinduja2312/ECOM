@@ -878,6 +878,120 @@ async function getOrderDetails(req, res) {
   }
 }
 
+async function rescheduleOrder(req, res) {
+  try {
+    const orderId = Number(req.params.orderId);
+    const { pickupLocation, pickupTime, deliveryAddress } = req.body;
+
+    const { data: order, error: orderError } = await supabaseAdmin
+      .from('orders')
+      .select('*')
+      .eq('id', orderId)
+      .single();
+
+    if (orderError || !order) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+
+    if (order.user_id !== req.user.id && !req.user.is_admin) {
+      return res.status(403).json({ error: 'Forbidden: Access denied' });
+    }
+
+    const updates = {
+      status_updated_at: new Date().toISOString(),
+    };
+
+    if (pickupLocation) updates.pickup_location = pickupLocation;
+    if (pickupTime) updates.pickup_time = new Date(pickupTime).toISOString();
+    if (deliveryAddress) updates.delivery_address = deliveryAddress;
+
+    const { data: updatedOrder, error: updateError } = await supabaseAdmin
+      .from('orders')
+      .update(updates)
+      .eq('id', orderId)
+      .select('*')
+      .single();
+
+    if (updateError) {
+      return res.status(500).json({ error: updateError.message });
+    }
+
+    // Also update logistics entry if it exists
+    await supabaseAdmin
+      .from('order_logistics')
+      .update({
+        pickup_location: updates.pickup_location || order.pickup_location,
+        pickup_time: updates.pickup_time || order.pickup_time,
+        status: 'pending_pickup', // Reset status if rescheduled
+        updated_at: new Date().toISOString()
+      })
+      .eq('order_id', orderId);
+
+    return res.json({ success: true, order: updatedOrder });
+  } catch (error) {
+    return res.status(500).json({ error: error.message || 'Failed to reschedule order' });
+  }
+}
+
+async function initiateReturn(req, res) {
+  try {
+    const orderId = Number(req.query.orderId);
+    const { reason, orderItemId } = req.body;
+
+    if (!orderId || !orderItemId || !reason) {
+      return res.status(400).json({ error: 'Missing required return fields' });
+    }
+
+    const { data: order, error: orderError } = await supabaseAdmin
+      .from('orders')
+      .select('*')
+      .eq('id', orderId)
+      .single();
+
+    if (orderError || !order) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+
+    if (order.user_id !== req.user.id) {
+      return res.status(403).json({ error: 'Forbidden: Access denied' });
+    }
+
+    // Insert into returns table
+    const { data: returnReq, error: returnError } = await supabaseAdmin
+      .from('returns')
+      .insert({
+        order_item_id: orderItemId,
+        user_id: req.user.id,
+        reason,
+        status: 'requested'
+      })
+      .select('*')
+      .single();
+
+    if (returnError) {
+      return res.status(500).json({ error: returnError.message });
+    }
+
+    // Update order status
+    await supabaseAdmin
+      .from('orders')
+      .update({ status: 'return_requested' })
+      .eq('id', orderId);
+
+    await createNotification({
+      userId: order.user_id,
+      type: 'return_status',
+      title: 'Return Requested',
+      message: `Your return request for Order #${orderId} has been submitted.`,
+      actionUrl: '/dashboard'
+    });
+
+    return res.json({ success: true, return: returnReq });
+  } catch (error) {
+    return res.status(500).json({ error: error.message || 'Failed to initiate return' });
+  }
+}
+
 module.exports = {
   createRazorpayOrder,
   verifyAndCreateOrder,
@@ -886,4 +1000,6 @@ module.exports = {
   getOrderDetails,
   getSellerOrders,
   confirmPickup,
+  rescheduleOrder,
+  initiateReturn,
 };
