@@ -1,6 +1,8 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const http = require('node:http');
+const { Server } = require('socket.io');
 
 const paymentRoutes = require('./routes/paymentRoutes');
 const adminRoutes = require('./routes/adminRoutes');
@@ -12,8 +14,11 @@ const {
   paymentLimiter,
   adminLimiter,
 } = require('./middleware/rateLimit');
+const { initSocketService } = require('./services/socketService');
 
 const app = express();
+const server = http.createServer(app);
+
 app.set('trust proxy', 1);
 const port = process.env.PORT || 5000;
 
@@ -46,8 +51,18 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use(globalLimiter);
 
+// Initialize Socket.io
+const io = new Server(server, {
+  cors: {
+    origin: allowedOrigins,
+    methods: ['GET', 'POST', 'PATCH'],
+  },
+});
+
+initSocketService(io);
+
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', service: 'student-marketplace-backend', version: '2.1.0' });
+  res.json({ status: 'ok', service: 'student-marketplace-backend', version: '2.2.0-ws' });
 });
 
 app.use('/api/payment', paymentLimiter, paymentRoutes);
@@ -56,6 +71,6 @@ app.use('/api/products', productRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/reviews', reviewRoutes);
 
-app.listen(port, () => {
-  console.log(`Backend running on port ${port}`);
+server.listen(port, () => {
+  console.log(`Backend with WebSockets running on port ${port}`);
 });

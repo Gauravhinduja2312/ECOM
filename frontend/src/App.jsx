@@ -34,6 +34,8 @@ const RoleSelectionPage = lazy(() => import('./pages/RoleSelectionPage'));
 const SellerPortalPage = lazy(preloadSellerPortalPage);
 const NotFoundPage = lazy(preloadNotFoundPage);
 
+import SupportChatWidget from './components/SupportChatWidget';
+
 function RouteLoader() {
   return (
     <div className="mx-auto max-w-6xl px-4 py-10">
@@ -146,6 +148,7 @@ function App() {
           </Suspense>
         </main>
         <ToastContainer />
+        <SupportChatWidget />
       </div>
     </ToastProvider>
   );
