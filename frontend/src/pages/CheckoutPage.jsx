@@ -25,8 +25,10 @@ export default function CheckoutPage() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [pickupLocation, setPickupLocation] = useState('Main Campus Gate A');
+  const [pickupLocation, setPickupLocation] = useState('Main Gate');
   const [pickupTime, setPickupTime] = useState('');
+  const [deliveryMethod, setDeliveryMethod] = useState('pickup'); // 'pickup' or 'delivery'
+  const [homeAddress, setHomeAddress] = useState('');
 
   const total = items.reduce(
     (sum, item) => sum + Number(item.products?.price || 0) * Number(item.quantity),
@@ -41,14 +43,20 @@ export default function CheckoutPage() {
       return;
     }
 
-    if (!pickupLocation.trim()) {
-      setError('Please enter a pickup location.');
-      return;
-    }
-
-    if (!pickupTime) {
-      setError('Please select a pickup time.');
-      return;
+    if (deliveryMethod === 'pickup') {
+      if (!pickupLocation.trim()) {
+        setError('Please enter a pickup location.');
+        return;
+      }
+      if (!pickupTime) {
+        setError('Please select a pickup time.');
+        return;
+      }
+    } else {
+      if (!homeAddress.trim()) {
+        setError('Please enter your home/hostel address.');
+        return;
+      }
     }
 
     const scriptLoaded = await loadRazorpayScript();
@@ -97,8 +105,10 @@ export default function CheckoutPage() {
                 items: payloadItems,
                 total,
                 userId: profile.id,
-                pickupLocation: pickupLocation.trim(),
-                pickupTime,
+                deliveryMethod,
+                pickupLocation: deliveryMethod === 'pickup' ? pickupLocation.trim() : null,
+                pickupTime: deliveryMethod === 'pickup' ? pickupTime : null,
+                deliveryAddress: deliveryMethod === 'delivery' ? homeAddress.trim() : null,
               }
             );
 
@@ -163,31 +173,74 @@ export default function CheckoutPage() {
           {/* Summary */}
           <div className="lg:col-span-2 space-y-8">
             <div className="glass-card p-10">
-               <h2 className="text-xl font-black uppercase tracking-tighter mb-8 flex items-center gap-3">
-                <span className="h-2 w-2 rounded-full bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]"></span>
-                Pickup Details
-              </h2>
-              <div className="grid gap-8 sm:grid-cols-2">
-                 <div>
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Pickup Location</label>
-                  <input
-                    type="text"
-                    value={pickupLocation}
-                    onChange={(event) => setPickupLocation(event.target.value)}
-                    className="elite-input"
-                    placeholder="e.g. Library, Canteen, Reception..."
-                  />
+               <div className="flex items-center justify-between mb-8">
+                  <h2 className="text-xl font-black uppercase tracking-tighter flex items-center gap-3">
+                    <span className="h-2 w-2 rounded-full bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]"></span>
+                    Fulfillment
+                  </h2>
+                  <div className="flex gap-1 p-1 bg-white/5 rounded-xl border border-white/5">
+                    {['pickup', 'delivery'].map((method) => (
+                      <button
+                        key={method}
+                        onClick={() => setDeliveryMethod(method)}
+                        className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
+                          deliveryMethod === method ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-white'
+                        }`}
+                      >
+                        {method}
+                      </button>
+                    ))}
+                  </div>
+               </div>
+
+              {deliveryMethod === 'pickup' ? (
+                <div className="grid gap-8 sm:grid-cols-2">
+                  <div>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4 block">Pickup Location</label>
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      {['Main Gate', 'Canteen', 'Library', 'Reception', 'Auditorium'].map((zone) => (
+                        <button
+                          key={zone}
+                          type="button"
+                          onClick={() => setPickupLocation(zone)}
+                          className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all ${
+                            pickupLocation === zone ? 'bg-indigo-600 border-indigo-600' : 'bg-white/5 border-white/10'
+                          }`}
+                        >
+                          {zone}
+                        </button>
+                      ))}
+                    </div>
+                    <input
+                      type="text"
+                      value={pickupLocation}
+                      onChange={(e) => setPickupLocation(e.target.value)}
+                      className="elite-input"
+                      placeholder="Custom location..."
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4 block">Pickup Time</label>
+                    <input
+                      type="datetime-local"
+                      value={pickupTime}
+                      onChange={(e) => setPickupTime(e.target.value)}
+                      className="elite-input"
+                    />
+                  </div>
                 </div>
-                 <div>
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Pickup Time</label>
-                  <input
-                    type="datetime-local"
-                    value={pickupTime}
-                    onChange={(event) => setPickupTime(event.target.value)}
-                    className="elite-input"
+              ) : (
+                <div className="space-y-4">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Home / Hostel Address</label>
+                  <textarea
+                    value={homeAddress}
+                    onChange={(e) => setHomeAddress(e.target.value)}
+                    className="elite-input min-h-[120px] py-4"
+                    placeholder="Enter your detailed address (Hostel Name, Room No, Floor)..."
                   />
+                  <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">🚀 Delivery usually takes 2-4 hours inside campus.</p>
                 </div>
-              </div>
+              )}
             </div>
 
             <div className="glass-card p-10">

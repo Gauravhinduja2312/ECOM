@@ -180,9 +180,20 @@ export default function ProductDetailPage() {
                 {product.description}
               </p>
 
-              <div className="flex flex-col gap-2">
-                <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Price</p>
-                <p className="text-5xl font-black tracking-tighter text-white">{formatCurrency(product.price)}</p>
+              <div className="flex flex-col gap-4">
+                <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Market Value & Savings</p>
+                <div className="flex items-center gap-6">
+                  <div className="flex flex-col">
+                    <p className="text-5xl font-black tracking-tighter text-white">{formatCurrency(product.price)}</p>
+                    <p className="text-[10px] font-black text-slate-500 line-through opacity-50 uppercase tracking-widest mt-1">
+                      Instead of {formatCurrency(product.price * 1.3)}
+                    </p>
+                  </div>
+                  <div className="bg-emerald-500/10 border border-emerald-500/20 px-4 py-2 rounded-2xl">
+                    <p className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.2em]">Save 23%</p>
+                    <p className="text-[8px] font-bold text-emerald-500/60 uppercase tracking-widest">College Discount</p>
+                  </div>
+                </div>
               </div>
 
               <div className="pt-8 border-t border-white/5 flex flex-wrap items-center gap-4">

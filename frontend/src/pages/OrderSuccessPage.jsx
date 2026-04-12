@@ -101,13 +101,24 @@ export default function OrderSuccessPage() {
         <div className="mt-6 flex flex-wrap gap-2">
           <button
             type="button"
-            className="btn-gradient rounded-lg px-4 py-2.5"
+            className="btn-gradient rounded-lg px-4 py-2.5 flex items-center gap-2 group"
+            onClick={() => {
+              // Mock verification trigger
+              alert('📸 Camera Verification Triggered!\n\nThis would normally open the camera to capture the student handover for audit and security purposes.');
+            }}
+          >
+            <span>📸</span>
+            Verify Handover Selfie
+          </button>
+          <button
+            type="button"
+            className="btn-gradient-secondary rounded-lg px-4 py-2.5"
             onClick={() => downloadInvoice(order, items, profile?.email || '')}
           >
             Download Invoice PDF
           </button>
           <Link to="/dashboard" className="btn-gradient-secondary rounded-lg px-4 py-2.5 font-semibold">
-            View Pickup Details
+            View My Orders
           </Link>
           <Link to="/products" className="btn-gradient-secondary rounded-lg px-4 py-2.5 font-semibold">
             Continue Shopping

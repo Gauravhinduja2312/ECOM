@@ -39,6 +39,24 @@ export default function LandingPage() {
               Sell Items
             </Link>
           </div>
+
+          {/* Student Pulse Section */}
+          <div className="mt-20 glass-card p-10 flex flex-wrap justify-around items-center gap-10 stagger-elite border-indigo-500/10 shadow-[0_0_50px_rgba(79,70,229,0.05)]">
+            <div className="text-center">
+              <p className="text-5xl font-black text-indigo-400 tracking-tighter">150+</p>
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mt-2">Active Students</p>
+            </div>
+            <div className="h-10 w-px bg-white/5 hidden md:block"></div>
+            <div className="text-center">
+              <p className="text-5xl font-black text-emerald-400 tracking-tighter">₹15,000+</p>
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mt-2">Savings Shared</p>
+            </div>
+            <div className="h-10 w-px bg-white/5 hidden md:block"></div>
+            <div className="text-center">
+              <p className="text-5xl font-black text-amber-400 tracking-tighter">500+</p>
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mt-2">Deals Completed</p>
+            </div>
+          </div>
         </section>
 
         {/* Hero Bento Feature Section */}
