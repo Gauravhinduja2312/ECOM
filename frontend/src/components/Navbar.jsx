@@ -73,19 +73,12 @@ export default function Navbar() {
               ) : (
                 <>
                   <Link
-                    to="/select-role"
-                    className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/5 border border-white/5 hover:bg-white/10 hover:border-violet-500/30 transition"
-                    title="Switch Mode"
-                  >
-                    <span>🔄</span>
-                  </Link>
-                  <Link
-                    to="/dashboard"
+                    to="/hub"
                     onMouseEnter={preloadUserDashboardPage}
                     className="group flex items-center gap-4 pl-3 pr-2 py-1.5 rounded-2xl bg-white/5 border border-white/5 hover:border-indigo-500/20 transition-all hover:bg-white/[0.08]"
                   >
                     <div className="hidden lg:block text-right">
-                      <p className="text-[8px] font-black text-slate-500 tracking-widest uppercase">Account</p>
+                      <p className="text-[8px] font-black text-slate-500 tracking-widest uppercase">My Hub</p>
                       <p className="text-[10px] font-black text-white tracking-tighter uppercase -mt-1">{profile.full_name || profile.email?.split('@')[0]}</p>
                     </div>
                     <div className={`h-8 w-8 rounded-xl flex items-center justify-center text-sm border-2 transition-all group-hover:scale-110 ${

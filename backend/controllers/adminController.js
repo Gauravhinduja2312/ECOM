@@ -71,6 +71,10 @@ async function getAnalytics(req, res) {
       0
     );
 
+    const totalLogisticsRevenue = orders
+      .filter((o) => ['order_placed', 'processing', 'ready_for_pickup', 'shipped', 'completed'].includes(o.status))
+      .reduce((sum, o) => sum + Number(o.delivery_fee || 0), 0);
+
     const totalSellerPayout = (orderItems || []).reduce(
       (sum, item) => sum + Number(item.seller_earning || 0),
       0
@@ -92,6 +96,7 @@ async function getAnalytics(req, res) {
       totalSellerPayout,
       totalListingFees,
       totalSponsoredFees,
+      totalLogisticsRevenue,
       totalOrders: orders.length,
       totalUsers: users.length,
       lowStockCount,
@@ -217,6 +222,202 @@ async function reviewProductSubmission(req, res) {
       payload.price_offer_status = product.proposed_price ? 'accepted' : 'none';
       payload.proposed_price = null;
       payload.admin_review_note = note || 'Product verified by admin';
+      // Uniqueness: Generate a Handover Code for secure physical pickup
+      payload.handover_code = Math.random().toString(36).substring(2, 8).toUpperCase();
+    }
+
+    if (action === 'reject') {
+      payload.verification_status = 'rejected';
+      payload.price_offer_status = 'rejected';
+      payload.admin_review_note = note || 'Product rejected by admin';
+    }
+
+    const { data: updatedProduct, error: updateError } = await supabaseAdmin
+      .from('products')
+      .update(payload)
+      .eq('id', productId)
+      .select('*')
+      .single();
+    const dailySalesMap = {};
+    const monthlySalesMap = {};
+
+    orders.forEach((order) => {
+      const createdAt = new Date(order.created_at);
+      const dayKey = createdAt.toISOString().split('T')[0];
+      const monthKey = `${createdAt.getFullYear()}-${String(createdAt.getMonth() + 1).padStart(2, '0')}`;
+      dailySalesMap[dayKey] = (dailySalesMap[dayKey] || 0) + Number(order.total_price);
+      monthlySalesMap[monthKey] = (monthlySalesMap[monthKey] || 0) + Number(order.total_price);
+    });
+
+    const userSpendingMap = {};
+    orders.forEach((order) => {
+      userSpendingMap[order.user_id] = (userSpendingMap[order.user_id] || 0) + Number(order.total_price);
+    });
+
+    const crmUsers = users.map((user) => ({
+      ...user,
+      total_spending: userSpendingMap[user.id] || 0,
+      orders_count: orders.filter((o) => o.user_id === user.id).length,
+    }));
+
+    const totalCommission = (orderItems || []).reduce(
+      (sum, item) => sum + Number(item.commission_amount || 0),
+      0
+    );
+
+    const totalLogisticsRevenue = orders
+      .filter((o) => ['order_placed', 'processing', 'ready_for_pickup', 'shipped', 'completed'].includes(o.status))
+      .reduce((sum, o) => sum + Number(o.delivery_fee || 0), 0);
+
+    const totalSellerPayout = (orderItems || []).reduce(
+      (sum, item) => sum + Number(item.seller_earning || 0),
+      0
+    );
+
+    const totalListingFees = (products || [])
+      .filter((product) => Boolean(product.seller_id))
+      .reduce((sum, product) => sum + Number(product.listing_fee || 0), 0);
+
+    const totalSponsoredFees = (products || [])
+      .filter((product) => Boolean(product.seller_id) && Boolean(product.is_sponsored))
+      .reduce((sum, product) => sum + Number(product.sponsored_fee || 0), 0);
+
+    const lowStockCount = (products || []).filter((product) => Number(product.stock || 0) > 0 && Number(product.stock || 0) < 3).length;
+
+    return res.json({
+      totalRevenue,
+      totalCommission,
+      totalSellerPayout,
+      totalListingFees,
+      totalSponsoredFees,
+      totalLogisticsRevenue,
+      totalOrders: orders.length,
+      totalUsers: users.length,
+      lowStockCount,
+      dailySales: dailySalesMap,
+      monthlySales: monthlySalesMap,
+      crmUsers,
+    });
+  } catch (error) {
+    return res.status(500).json({ error: error.message || 'Failed to fetch analytics' });
+  }
+}
+
+async function getProductSubmissions(req, res) {
+  try {
+    const { data: products, error: productsError } = await supabaseAdmin
+      .from('products')
+      .select('id, name, description, price, category, stock, seller_id, verification_status, admin_review_note, proposed_price, price_offer_status, final_price, commission_rate, listing_number, listing_fee, is_sponsored, sponsored_fee, sponsored_until, created_at, updated_at')
+      .not('seller_id', 'is', null)
+      .order('verification_status', { ascending: false })
+      .order('created_at', { ascending: false });
+
+    if (productsError) {
+      return res.status(500).json({ error: productsError.message });
+    }
+
+    const sellerIds = [...new Set((products || []).map((product) => product.seller_id).filter(Boolean))];
+
+    let sellerMetaById = {};
+    if (sellerIds.length) {
+      const { data: sellers, error: sellersError } = await supabaseAdmin
+        .from('users')
+        .select('id, email, upi_id, upi_qr_url')
+        .in('id', sellerIds);
+
+      if (sellersError) {
+        return res.status(500).json({ error: sellersError.message });
+      }
+
+      sellerMetaById = Object.fromEntries((sellers || []).map((seller) => [seller.id, seller]));
+    }
+
+    const submissions = (products || []).map((product) => ({
+      ...product,
+      seller_email: sellerMetaById[product.seller_id]?.email || null,
+      seller_upi_id: sellerMetaById[product.seller_id]?.upi_id || null,
+    }));
+
+    return res.json({ submissions });
+  } catch (error) {
+    return res.status(500).json({ error: error.message || 'Failed to fetch submissions' });
+  }
+}
+
+async function reviewProductSubmission(req, res) {
+  try {
+    const productId = Number(req.params.productId);
+    const { action, proposedPrice, commissionRate, note } = req.body;
+
+    if (!productId || Number.isNaN(productId)) {
+      return res.status(400).json({ error: 'Invalid product id' });
+    }
+
+    if (!['verify', 'reject', 'counter'].includes(action)) {
+      return res.status(400).json({ error: 'Invalid action' });
+    }
+
+    if (note !== undefined && note !== null) {
+      if (typeof note !== 'string' || note.trim().length > 300) {
+        return res.status(400).json({ error: 'Note must be a string up to 300 characters' });
+      }
+    }
+
+    const { data: product, error: productError } = await supabaseAdmin
+      .from('products')
+      .select('*')
+      .eq('id', productId)
+      .single();
+
+    if (productError) {
+      return res.status(500).json({ error: productError.message });
+    }
+
+    if (!product) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+
+    const payload = {
+      updated_at: new Date().toISOString(),
+    };
+
+    if (commissionRate !== undefined && commissionRate !== null && commissionRate !== '') {
+      const rate = Number(commissionRate);
+      if (Number.isNaN(rate) || rate < 0 || rate > 100) {
+        return res.status(400).json({ error: 'Commission rate must be between 0 and 100' });
+      }
+      payload.commission_rate = rate;
+    }
+
+    if (action === 'counter') {
+      const offeredPrice = Number(proposedPrice);
+      if (Number.isNaN(offeredPrice) || offeredPrice <= 0) {
+        return res.status(400).json({ error: 'Counter price must be a positive number' });
+      }
+
+      payload.proposed_price = offeredPrice;
+      payload.price_offer_status = 'pending_student_response';
+      payload.verification_status = 'pending';
+      payload.admin_review_note = note || 'Admin sent a counter offer';
+    }
+
+    if (action === 'verify') {
+      const approvedPrice = proposedPrice !== undefined && proposedPrice !== null && proposedPrice !== ''
+        ? Number(proposedPrice)
+        : Number(product.proposed_price || product.price);
+
+      if (Number.isNaN(approvedPrice) || approvedPrice <= 0) {
+        return res.status(400).json({ error: 'Approved price must be a positive number' });
+      }
+
+      payload.price = approvedPrice;
+      payload.final_price = approvedPrice;
+      payload.verification_status = 'verified';
+      payload.price_offer_status = product.proposed_price ? 'accepted' : 'none';
+      payload.proposed_price = null;
+      payload.admin_review_note = note || 'Product verified by admin';
+      // Uniqueness: Generate a Handover Code for secure physical pickup
+      payload.handover_code = Math.random().toString(36).substring(2, 8).toUpperCase();
     }
 
     if (action === 'reject') {
@@ -242,6 +443,89 @@ async function reviewProductSubmission(req, res) {
     });
   } catch (error) {
     return res.status(500).json({ error: error.message || 'Failed to review submission' });
+  }
+}
+
+async function verifyHandoverCode(req, res) {
+  try {
+    const { productId, code } = req.body;
+    
+    if (!productId || !code) {
+      return res.status(400).json({ error: 'Product ID and Code are required' });
+    }
+
+    const { data: product, error } = await supabaseAdmin
+      .from('products')
+      .select('handover_code, verification_status, seller_id')
+      .eq('id', productId)
+      .single();
+
+    if (error || !product) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+
+    if (product.handover_code !== code.toUpperCase()) {
+      return res.status(400).json({ error: 'Invalid handover code' });
+    }
+
+    // Mark as physically received
+    await supabaseAdmin
+      .from('products')
+      .update({ 
+        handover_status: 'confirmed',
+        admin_review_note: 'Handover code verified. Physically received by Admin.'
+      })
+      .eq('id', productId);
+
+    return res.json({ success: true, message: 'Handover verified successfully!' });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+}
+
+async function processReturn(req, res) {
+  try {
+    const { returnId, action, note } = req.body;
+
+    if (!['approved', 'rejected', 'refunded'].includes(action)) {
+      return res.status(400).json({ error: 'Invalid return action' });
+    }
+
+    const { data: returnData, error: fetchError } = await supabaseAdmin
+      .from('returns')
+      .select('*, order_item:order_items(product_id, quantity)')
+      .eq('id', returnId)
+      .single();
+
+    if (fetchError || !returnData) {
+      return res.status(404).json({ error: 'Return request not found' });
+    }
+
+    const updates = { 
+      status: action, 
+      admin_note: note,
+      updated_at: new Date().toISOString()
+    };
+
+    const { error: updateError } = await supabaseAdmin
+      .from('returns')
+      .update(updates)
+      .eq('id', returnId);
+
+    if (updateError) throw updateError;
+
+    // If refunded, restock the item if it was received
+    if (action === 'refunded') {
+      const productId = returnData.order_item.product_id;
+      const { data: product } = await supabaseAdmin.from('products').select('stock').eq('id', productId).single();
+      if (product) {
+        await supabaseAdmin.from('products').update({ stock: product.stock + returnData.order_item.quantity }).eq('id', productId);
+      }
+    }
+
+    return res.json({ success: true, message: `Return ${action} successfully` });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
   }
 }
 
@@ -541,4 +825,6 @@ module.exports = {
   getSellerPayouts,
   markSellerPayoutsPaid,
   updateOrderStatus,
+  verifyHandoverCode,
+  processReturn,
 };

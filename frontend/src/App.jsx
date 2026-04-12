@@ -27,6 +27,7 @@ const ProductDetailPage = lazy(preloadProductDetailPage);
 const CartPage = lazy(preloadCartPage);
 const CheckoutPage = lazy(preloadCheckoutPage);
 const OrderSuccessPage = lazy(preloadOrderSuccessPage);
+const HubPage = lazy(() => import('./pages/HubPage'));
 const UserDashboardPage = lazy(preloadUserDashboardPage);
 const AdminDashboardPage = lazy(preloadAdminDashboardPage);
 const RoleSelectionPage = lazy(() => import('./pages/RoleSelectionPage'));
@@ -62,7 +63,7 @@ function App() {
     <ToastProvider>
       <div className="min-h-screen bg-[#020617] text-white">
         <Navbar />
-        <main>
+        <main className="pt-32">
           <Suspense fallback={<RouteLoader />}>
             <Routes>
               <Route path="/" element={<LandingPage />} />
@@ -105,20 +106,20 @@ function App() {
                 }
               />
               <Route
-                path="/dashboard"
+                path="/hub"
                 element={
                   <ProtectedRoute>
-                    <UserDashboardPage />
+                    <HubPage />
                   </ProtectedRoute>
                 }
               />
               <Route
+                path="/dashboard"
+                element={<Navigate to="/hub" replace />}
+              />
+              <Route
                 path="/seller/dashboard"
-                element={
-                  <ProtectedRoute>
-                    <SellerPortalPage />
-                  </ProtectedRoute>
-                }
+                element={<Navigate to="/hub" replace />}
               />
               <Route
                 path="/sell"

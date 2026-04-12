@@ -33,7 +33,7 @@ export default function AdminDashboardPage() {
   const [inventoryLogs, setInventoryLogs] = useState([]);
   const [reviewDrafts, setReviewDrafts] = useState({});
   const [reviewLoadingId, setReviewLoadingId] = useState(null);
-  const [activeTab, setActiveTab] = useState('products');
+  const [activeTab, setActiveTab ] = useState('scm');
   const [productStatusTab, setProductStatusTab] = useState('pending');
   const [acquireDrafts, setAcquireDrafts] = useState({});
   const [acquireLoadingId, setAcquireLoadingId] = useState(null);
@@ -195,7 +195,34 @@ export default function AdminDashboardPage() {
     }
   };
 
+  const handleProcessReturn = async (returnId, action) => {
+    try {
+      await apiRequest('/api/admin/returns/process', 'POST', session.access_token, { returnId, action });
+      addToast(`Return ${action} successfully.`, 'success');
+      await fetchAdminData();
+    } catch (error) {
+      addToast(error.message || 'Operation failed.', 'error');
+    }
+  };
 
+  const handleHandoverAction = async (productId, action, metadata = {}) => {
+    try {
+      if (action === 'confirm_handover') {
+        await apiRequest(`/api/admin/handover/confirm`, 'POST', session.access_token, { productId });
+        addToast('Handover confirmed!', 'success');
+      } else if (action === 'reschedule_handover') {
+        await apiRequest(`/api/admin/handover/reschedule`, 'POST', session.access_token, { productId, ...metadata });
+        addToast('Reschedule proposal sent.', 'success');
+      } else if (action === 'verify_code') {
+        const { code } = metadata;
+        await apiRequest(`/api/admin/handover/verify`, 'POST', session.access_token, { productId, code });
+        addToast('Handover Code verified!', 'success');
+      }
+      await fetchAdminData();
+    } catch (error) {
+      addToast(error.message || 'Operation failed.', 'error');
+    }
+  };
 
   if (loading) return <Loader text="Loading Admin Dashboard..." />;
 
@@ -203,32 +230,27 @@ export default function AdminDashboardPage() {
   const verifiedProducts = submissions.filter((sub) => sub.verification_status === 'verified');
   const rejectedProducts = submissions.filter((sub) => sub.verification_status === 'rejected');
 
-  const displayedProducts = {
-    pending: pendingProducts,
-    verified: verifiedProducts,
-    rejected: rejectedProducts,
-  }[productStatusTab] || [];
-
   return (
-    <div className="bg-[#020617] min-h-screen pt-48 pb-20 text-white">
+    <div className="bg-[#020617] min-h-screen pt-48 pb-20 text-white font-['Outfit']">
       <div className="mx-auto max-w-7xl px-6 space-y-12">
         {/* Header Section */}
         <header className="flex flex-col md:flex-row justify-between items-end gap-8">
           <div className="stagger-elite">
             <h1 className="text-5xl font-black tracking-tight uppercase inline-flex items-center gap-5">
               <span className="h-16 w-16 rounded-3xl bg-indigo-600 flex items-center justify-center text-2xl shadow-[0_0_40px_rgba(79,70,229,0.3)]">⚡</span>
-              Admin Dashboard
+              Admin HUB
             </h1>
-            <p className="mt-4 text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">Campus Management Center</p>
+            <p className="mt-4 text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">Logistics & CRM Pipeline</p>
           </div>
           
           <div className="flex gap-2 glass-elite p-1 rounded-2xl">
             {[
-              { id: 'products', label: 'Assets', icon: '📦' },
-              { id: 'orders', label: 'Orders', icon: '🛒' },
+              { id: 'scm', label: 'SCM Pipeline', icon: '🚚' },
+              { id: 'crm', label: 'Student CRM', icon: '👥' },
+              { id: 'orders', label: 'Live Orders', icon: '🛒' },
+              { id: 'analytics', label: 'Revenue', icon: '📊' },
               { id: 'payouts', label: 'Payouts', icon: '💰' },
-              { id: 'analytics', label: 'Stats', icon: '📊' },
-              { id: 'support', label: 'Support', icon: '🎧' },
+              { id: 'returns', label: 'Returns', icon: '↩️' },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -251,8 +273,8 @@ export default function AdminDashboardPage() {
             {[
               { label: 'Gross Revenue', value: formatCurrency(analytics.totalRevenue), color: 'text-white' },
               { label: 'Platform Profit', value: formatCurrency((analytics.totalRevenue || 0) - (analytics.totalSellerPayout || 0)), color: 'text-indigo-400' },
-              { label: 'Total Payouts', value: formatCurrency(analytics.totalSellerPayout || 0), color: 'text-emerald-400' },
-              { label: 'Active Users', value: users.length, color: 'text-amber-400' },
+              { label: 'Logistic Revenue', value: formatCurrency(analytics.totalLogisticsRevenue || 0), color: 'text-emerald-400' },
+              { label: 'Registered Students', value: users.length, color: 'text-amber-400' },
             ].map((stat, i) => (
               <div key={i} className="glass-card p-8 group">
                 <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-3">{stat.label}</p>
@@ -264,215 +286,143 @@ export default function AdminDashboardPage() {
 
         {/* Dynamic Content Domain */}
         <main className="glass-elite rounded-[2.5rem] overflow-hidden min-h-[600px] flex flex-col">
-          {/* Internal Tab Navigation (Contextual) */}
-          {activeTab === 'products' && (
-            <div className="px-10 h-20 border-b border-white/5 flex items-center gap-10 bg-white/5">
-              {[
-                { id: 'pending', label: 'New Requests', count: pendingProducts.length },
-                { id: 'verified', label: 'Live Items', count: verifiedProducts.length },
-                { id: 'rejected', label: 'Rejected', count: rejectedProducts.length },
-              ].map((subTab) => (
-                <button
-                  key={subTab.id}
-                  onClick={() => setProductStatusTab(subTab.id)}
-                  className={`relative h-full text-[10px] font-black uppercase tracking-widest transition-colors ${
-                    productStatusTab === subTab.id ? 'text-white' : 'text-slate-500 hover:text-white'
-                  }`}
-                >
-                  {subTab.label} <span className="ml-2 opacity-50">[{subTab.count}]</span>
-                  {productStatusTab === subTab.id && (
-                    <div className="absolute bottom-0 left-0 right-0 h-1 bg-indigo-600 shadow-[0_0_15px_rgba(79,70,229,0.5)]"></div>
-                  )}
-                </button>
-              ))}
-            </div>
-          )}
-
           <div className="flex-1 p-10 overflow-auto">
-            {/* Contextual Render Logic */}
-            {activeTab === 'products' && (
-              <div className="space-y-6">
-                {displayedProducts.length === 0 ? (
-                  <div className="h-64 flex flex-col items-center justify-center border border-dashed border-white/10 rounded-3xl opacity-50">
-                    <p className="text-4xl mb-4">📂</p>
-                    <p className="text-[10px] font-black uppercase tracking-widest">No items found</p>
-                  </div>
-                ) : (
-                  displayedProducts.map((sub) => {
-                    const draft = reviewDrafts[sub.id] || {};
-                    const isAcceptedByStudent = sub.verification_status === 'pending' && sub.price_offer_status === 'accepted';
-                    
-                    return (
-                      <div key={sub.id} className="glass-card flex flex-col md:flex-row items-center gap-8 p-8 transition hover:bg-white/[0.04]">
-                        <div className="h-24 w-24 rounded-2xl bg-white/5 flex-shrink-0 overflow-hidden border border-white/10">
-                          {sub.image_url ? <img src={sub.image_url} className="h-full w-full object-cover" /> : <div className="h-full w-full flex items-center justify-center text-2xl opacity-20">📦</div>}
-                        </div>
+            
+            {/* SCM KANBAN BOARD */}
+            {activeTab === 'scm' && (
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6 min-h-[600px]">
+                {[
+                  { id: 'pending', title: 'New Submissions', items: pendingProducts },
+                  { id: 'logistics', title: 'Handover Pipeline', items: verifiedProducts.filter(p => p.handover_status !== 'confirmed') },
+                  { id: 'warehouse', title: 'Active Inventory', items: verifiedProducts.filter(p => p.handover_status === 'confirmed') },
+                  { id: 'rejected', title: 'Rejected Requests', items: rejectedProducts },
+                ].map((column) => (
+                  <div key={column.id} className="flex flex-col gap-4">
+                    <div className="flex items-center justify-between px-2 mb-2">
+                      <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">{column.title}</h3>
+                      <span className="px-2 py-0.5 rounded bg-white/5 text-[9px] font-bold text-slate-500">{column.items.length}</span>
+                    </div>
+                    <div className="flex-1 space-y-4">
+                      {column.items.map((sub) => {
+                        const draft = reviewDrafts[sub.id] || {};
+                        const isAcceptedByStudent = sub.verification_status === 'pending' && sub.price_offer_status === 'accepted';
                         
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-4 mb-2">
-                            <h3 className="text-xl font-black uppercase tracking-tighter truncate">{sub.name}</h3>
-                            <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest ${
-                              sub.verification_status === 'verified' ? 'bg-emerald-500/10 text-emerald-400' :
-                              sub.verification_status === 'rejected' ? 'bg-rose-500/10 text-rose-400' :
-                              'bg-amber-500/10 text-amber-400'
-                            }`}>{sub.verification_status}</span>
-                          </div>
-                          <p className="text-xs text-slate-500 font-medium truncate mb-2">Seller: {sub.seller_email}</p>
-                          <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                            <span>📍 Handover:</span> {sub.seller_pickup_location || 'Not Specified'}
-                          </p>
-                          <div className="flex flex-wrap gap-6">
-                            <div>
-                              <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">Valuation</p>
-                              <p className="text-sm font-black text-white">{formatCurrency(sub.price)}</p>
-                            </div>
-                            <div>
-                              <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">Handover Appointment</p>
-                              <div className="flex items-center gap-2">
-                                <p className={`text-xs font-black uppercase tracking-widest ${
-                                  sub.handover_status === 'confirmed' ? 'text-emerald-400' :
-                                  sub.handover_status === 'rescheduled' ? 'text-indigo-400' :
-                                  sub.handover_status === 'rejected' ? 'text-rose-400' :
-                                  'text-amber-400'
-                                }`}>
-                                  {sub.seller_pickup_time ? new Date(sub.seller_pickup_time).toLocaleString() : 'Not Scheduled'}
-                                </p>
-                                <span className="text-[10px] opacity-40 capitalize">({sub.handover_status})</span>
+                        return (
+                          <div key={sub.id} className="glass-card p-5 hover:border-indigo-500/30 transition-all border border-white/5">
+                            <div className="flex gap-4 mb-4">
+                              <div className="h-12 w-12 rounded-xl bg-white/5 overflow-hidden border border-white/5 flex-shrink-0">
+                                {sub.image_url ? <img src={sub.image_url} className="h-full w-full object-cover" /> : <div className="h-full w-full flex items-center justify-center text-xl opacity-20">📦</div>}
+                              </div>
+                              <div className="min-w-0">
+                                <h4 className="text-sm font-black uppercase tracking-tight truncate">{sub.name}</h4>
+                                <p className="text-[9px] text-slate-500 font-bold truncate">{sub.seller_email}</p>
                               </div>
                             </div>
-                          </div>
-                        </div>
+                            
+                            <div className="space-y-3">
+                              <div className="flex justify-between items-center text-[9px] font-black uppercase tracking-widest text-slate-400">
+                                <span>VALUATION:</span>
+                                <span className="text-white">{formatCurrency(sub.price)}</span>
+                              </div>
+                              <div className="flex justify-between items-center text-[9px] font-black uppercase tracking-widest text-slate-400">
+                                <span>LOCATION:</span>
+                                <span className="text-white truncate max-w-[100px]">{sub.seller_pickup_location || 'TBD'}</span>
+                              </div>
+                            </div>
 
-                        <div className="w-full md:w-auto flex flex-col gap-3">
-                          {sub.verification_status === 'pending' && (
-                            <>
-                              {isAcceptedByStudent ? (
-                                <div className="flex flex-col gap-4 p-6 bg-white/5 rounded-3xl border border-white/5 w-full md:w-[400px]">
-                                  <div className="space-y-4">
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-indigo-400">Buyout Payout (Student UPI)</p>
-                                    <div className="p-4 bg-indigo-600/10 rounded-2xl border border-indigo-600/20">
-                                      <p className="text-sm font-black text-white mb-1">Payable: {formatCurrency(sub.proposed_price || sub.price)}</p>
-                                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">UPI: {sub.seller_upi_id || 'Not Provided'}</p>
-                                    </div>
-                                    
-                                    <div>
-                                      <label className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Set Retail Price (10% Markup Suggested)</label>
-                                      <input 
-                                        type="number" 
-                                        className="elite-input py-3" 
-                                        placeholder="Retail ₹"
-                                        value={acquireDrafts[sub.id] ?? ((sub.proposed_price || sub.price) * 1.1).toFixed(2)}
-                                        onChange={(e) => setAcquireDrafts({...acquireDrafts, [sub.id]: e.target.value})}
-                                      />
-                                    </div>
-
-                                    <div>
-                                      <label className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Transaction ID (UPI Ref)</label>
-                                      <input 
-                                        type="text" 
-                                        className="elite-input py-3" 
-                                        placeholder="UTR / Ref Number..."
-                                        id={`payout-ref-${sub.id}`}
-                                      />
-                                    </div>
-
-                                    <button 
-                                      onClick={() => {
-                                        const ref = document.getElementById(`payout-ref-${sub.id}`).value;
-                                        if (!ref) {
-                                          addToast('Please enter the UPI transaction reference.', 'warning');
-                                          return;
-                                        }
-                                        handleAcquire(sub.id, (sub.proposed_price || sub.price), ref);
-                                      }} 
-                                      className="btn-elite w-full py-4 text-[10px]"
-                                    >
-                                      PAID & POST TO SHOP
-                                    </button>
-                                  </div>
-                                </div>
-                              ) : (
-                                <div className="flex flex-col gap-3 min-w-[300px]">
-                                  <div className="p-4 rounded-2xl bg-white/5 border border-white/5 space-y-4">
-                                    <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-500">Handover Negotiation</h4>
-                                    
-                                    {sub.seller_pickup_time && (() => {
-                                      const apptTime = new Date(sub.seller_pickup_time).getTime();
-                                      const now = Date.now();
-                                      const isTooClose = apptTime - now < 2 * 60 * 60 * 1000 && apptTime > now;
-                                      
-                                      return (
-                                        <div className="flex flex-col gap-3">
-                                          {sub.handover_status !== 'confirmed' && (
-                                            <button 
-                                              disabled={isTooClose}
-                                              onClick={() => handleHandoverAction(sub.id, 'confirm_handover')} 
-                                              className="btn-elite w-full py-3 text-[9px] bg-emerald-600 border-emerald-500/20 disabled:opacity-20"
-                                            >
-                                              CONFIRM APPOINTMENT
-                                            </button>
-                                          )}
-                                          
-                                          <div className="space-y-2">
-                                            <p className="text-[8px] font-black uppercase text-slate-600">Propose New Time/Place</p>
-                                            <input 
-                                              type="datetime-local" 
-                                              className="elite-input text-xs py-2"
-                                              value={handoverRescheduleDrafts[sub.id]?.newTime || ''}
-                                              onChange={(e) => setHandoverRescheduleDrafts({...handoverRescheduleDrafts, [sub.id]: {...handoverRescheduleDrafts[sub.id], newTime: e.target.value}})}
-                                            />
-                                            <input 
-                                              type="text" 
-                                              placeholder="Alternate Location..."
-                                              className="elite-input text-xs py-2"
-                                              value={handoverRescheduleDrafts[sub.id]?.newLocation || ''}
-                                              onChange={(e) => setHandoverRescheduleDrafts({...handoverRescheduleDrafts, [sub.id]: {...handoverRescheduleDrafts[sub.id], newLocation: e.target.value}})}
-                                            />
-                                            <button 
-                                              disabled={isTooClose}
-                                              onClick={() => handleHandoverAction(sub.id, 'reschedule_handover', { 
-                                                newTime: handoverRescheduleDrafts[sub.id]?.newTime,
-                                                newLocation: handoverRescheduleDrafts[sub.id]?.newLocation
-                                              })} 
-                                              className="btn-elite w-full py-3 text-[9px] disabled:opacity-20"
-                                            >
-                                              SUGGEST UPDATE
-                                            </button>
-                                          </div>
-
-                                          <button 
-                                            disabled={isTooClose}
-                                            onClick={() => handleHandoverAction(sub.id, 'reject')} 
-                                            className="text-[9px] font-black text-slate-600 hover:text-rose-500 uppercase tracking-widest transition disabled:opacity-20"
-                                          >
-                                            Reject Appointment
-                                          </button>
-
-                                          {isTooClose && <p className="text-[8px] font-bold text-rose-500 uppercase tracking-widest text-center mt-2">Locked: Less than 2h remaining</p>}
-                                        </div>
-                                      );
-                                    })()}
-                                  </div>
-                                  
-                                  <div className="flex gap-2">
-                                    <input 
-                                      type="number" 
-                                      className="elite-input w-24 py-3" 
-                                      placeholder="Final ₹"
-                                      value={draft.proposedPrice}
-                                      onChange={(e) => setReviewDrafts({...reviewDrafts, [sub.id]: {...draft, proposedPrice: e.target.value}})}
-                                    />
-                                    <button onClick={() => handleReview(sub.id, 'counter')} className="btn-elite flex-1 py-3 text-[9px]">COUNTER OFFER</button>
-                                  </div>
+                            <div className="mt-4 pt-4 border-t border-white/5 flex flex-col gap-2">
+                              {column.id === 'pending' && (
+                                <div className="space-y-2">
+                                  <input 
+                                    type="number" 
+                                    className="elite-input text-[10px] py-2" 
+                                    placeholder="Offer ₹"
+                                    value={draft.proposedPrice}
+                                    onChange={(e) => setReviewDrafts({...reviewDrafts, [sub.id]: {...draft, proposedPrice: e.target.value}})}
+                                  />
+                                  <button onClick={() => handleReview(sub.id, 'verify')} className="btn-elite w-full py-2 text-[9px]">VERIFY & SEND CODE</button>
                                 </div>
                               )}
-                            </>
-                          )}
+                              
+                              {column.id === 'logistics' && (
+                                <div className="space-y-3">
+                                   <div className="p-2 rounded-lg bg-indigo-600/10 border border-indigo-600/20 text-center">
+                                      <p className="text-[8px] font-black uppercase text-indigo-400 mb-1">HANDOVER CODE</p>
+                                      <p className="text-sm font-black tracking-[0.2em] text-white">{sub.handover_code || '---'}</p>
+                                   </div>
+                                    <div className="flex gap-2">
+                                      <input type="text" id={`verify-${sub.id}`} placeholder="Enter Code..." className="elite-input py-2 text-[10px]" />
+                                      <button 
+                                        onClick={() => handleHandoverAction(sub.id, 'verify_code', { code: document.getElementById(`verify-${sub.id}`).value })}
+                                        className="px-4 bg-indigo-600 rounded-lg text-[10px] font-black"
+                                      >✅</button>
+                                    </div>
+                                </div>
+                              )}
+
+                              {isAcceptedByStudent && (
+                                <button 
+                                  onClick={() => handleAcquire(sub.id, (sub.proposed_price || sub.price), 'PHYSICAL_VERIFIED')} 
+                                  className="btn-elite w-full py-3 text-[9px] bg-emerald-600 shadow-emerald-500/20"
+                                >
+                                  ACQUIRE & LIST LIVE
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* CRM ACCOUNT HUB */}
+            {activeTab === 'crm' && (
+              <div className="space-y-8">
+                <div className="flex justify-between items-end border-b border-white/5 pb-8">
+                  <div>
+                    <h2 className="text-3xl font-black uppercase tracking-tighter">Student CRM</h2>
+                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-2">{users.length} Registered Campus Users</p>
+                  </div>
+                  <input 
+                    type="text" 
+                    placeholder="Search Student..." 
+                    className="elite-input w-96 shadow-[0_0_20px_rgba(255,255,255,0.02)]"
+                  />
+                </div>
+
+                <div className="grid gap-4">
+                  {users.map((user) => (
+                    <div key={user.id} className="glass-card p-6 flex items-center justify-between hover:bg-white/[0.02] transition border border-white/5">
+                      <div className="flex items-center gap-6">
+                        <div className="h-12 w-12 rounded-full bg-indigo-600/20 flex items-center justify-center font-black text-lg text-indigo-400 border border-indigo-500/10">
+                          {user.email[0].toUpperCase()}
+                        </div>
+                        <div>
+                          <p className="text-sm font-black tracking-tight">{user.email}</p>
+                          <div className="flex items-center gap-3 mt-1">
+                            <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded bg-white/5 text-slate-500">{user.role}</span>
+                            <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded bg-amber-500/10 text-amber-500">Tier: {user.loyalty_tier || 'Bronze'}</span>
+                          </div>
                         </div>
                       </div>
-                    );
-                  })
-                )}
+                      
+                      <div className="flex gap-8 items-center">
+                        <div className="text-right">
+                          <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1">Orders</p>
+                          <p className="text-sm font-black">{user.orders_count || 0}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1">Total Spent</p>
+                          <p className="text-sm font-black text-emerald-400">{formatCurrency(user.total_spending || 0)}</p>
+                        </div>
+                        <button className="px-5 py-2 rounded-lg bg-white/5 text-[9px] font-black uppercase tracking-widest hover:bg-white/10 transition">Manage</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 
@@ -480,7 +430,7 @@ export default function AdminDashboardPage() {
               <div className="space-y-4">
                 {orders.length === 0 ? <p className="text-center text-slate-500 font-black uppercase tracking-widest py-20">No orders found</p> : (
                   orders.map((order) => (
-                    <div key={order.id} className="glass-card p-8 flex flex-col md:flex-row justify-between items-center gap-8">
+                    <div key={order.id} className="glass-card p-8 flex flex-col md:flex-row justify-between items-center gap-8 border border-white/5">
                       <div className="flex-1">
                         <div className="flex items-center gap-4 mb-4">
                           <h3 className="text-lg font-black uppercase tracking-tighter">Order #{order.id.slice(0,8)}</h3>
@@ -492,27 +442,22 @@ export default function AdminDashboardPage() {
                             <p className="text-sm font-black text-white">{formatCurrency(order.total_price)}</p>
                           </div>
                           <div>
-                            <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">Timestamp</p>
+                            <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">Date</p>
                             <p className="text-xs text-slate-400">{new Date(order.created_at).toLocaleDateString()}</p>
                           </div>
                           <div className="col-span-2">
-                            <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">Logistics Detail</p>
-                            <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">
-                              {order.pickup_location ? `📍 ${order.pickup_location} @ ${new Date(order.pickup_time).toLocaleString()}` : `🏠 ${order.delivery_address || 'Home Delivery'}`}
+                            <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">Method / Location</p>
+                            <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest truncate">
+                              {order.pickup_location ? `📍 ${order.pickup_location} @ ${new Date(order.pickup_time).toLocaleString()}` : `🏠 ${order.delivery_address || 'Home'}`}
                             </p>
                           </div>
                         </div>
                       </div>
                       
                       <div className="flex flex-col gap-2">
-                        {order.status === 'order_placed' && <button onClick={() => handleUpdateOrderStatus(order.id, 'processing')} className="btn-elite px-6 py-3 text-[10px]">START PROCESSING</button>}
-                        {order.status === 'processing' && (
-                          <>
-                            <button onClick={() => handleUpdateOrderStatus(order.id, 'ready_for_pickup')} className="btn-elite px-6 py-3 text-[10px] bg-amber-600 shadow-[0_0_20px_rgba(217,119,6,0.3)] border-amber-500/20">READY FOR PICKUP</button>
-                            <button onClick={() => handleUpdateOrderStatus(order.id, 'shipped')} className="btn-elite px-6 py-3 text-[10px]">SEND SHIPMENT</button>
-                          </>
-                        )}
-                        {(order.status === 'shipped' || order.status === 'ready_for_pickup') && <button onClick={() => handleUpdateOrderStatus(order.id, 'completed')} className="btn-elite px-6 py-3 text-[10px] bg-emerald-600 shadow-[0_0_20px_rgba(16,185,129,0.3)] border-emerald-500/20">MARK COMPLETE</button>}
+                        {order.status === 'order_placed' && <button onClick={() => handleUpdateOrderStatus(order.id, 'processing')} className="btn-elite px-6 py-3 text-[10px]">PROCESS</button>}
+                        {order.status === 'processing' && <button onClick={() => handleUpdateOrderStatus(order.id, 'ready_for_pickup')} className="btn-elite px-6 py-3 text-[10px] bg-amber-600">READY</button>}
+                        {(order.status === 'shipped' || order.status === 'ready_for_pickup') && <button onClick={() => handleUpdateOrderStatus(order.id, 'completed')} className="btn-elite px-6 py-3 text-[10px] bg-emerald-600">COMPLETE</button>}
                         <button onClick={() => handleDownloadInvoice(order)} className="px-6 py-3 bg-white/5 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-white transition">INVOICE</button>
                       </div>
                     </div>
@@ -523,44 +468,27 @@ export default function AdminDashboardPage() {
 
             {activeTab === 'payouts' && (
               <div className="space-y-6">
-                <div className="flex justify-between items-center mb-8">
-                  <h2 className="text-xl font-black uppercase tracking-tighter">Seller Payouts</h2>
-                  <button onClick={fetchAdminData} className="text-[10px] font-black text-indigo-400 uppercase tracking-widest hover:text-white transition">Refresh List</button>
-                </div>
-                
-                {sellerPayouts.map((payout) => (
-                  <div key={payout.seller_id} className="glass-card p-10">
+                 {sellerPayouts.map((payout) => (
+                  <div key={payout.seller_id} className="glass-card p-10 border border-white/5">
                     <div className="flex flex-wrap justify-between items-start gap-8 mb-10">
                       <div>
                         <h3 className="text-lg font-black uppercase tracking-tighter text-white">{payout.seller_email}</h3>
-                        <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mt-1">User ID: {payout.seller_id}</p>
+                        <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mt-1">UPI: {payout.seller_upi_id || 'Not Set'}</p>
                       </div>
                       <div className="flex gap-4">
                         <div className="px-6 py-4 rounded-2xl bg-white/5 border border-white/5 text-right">
-                          <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1">Pending Liquidation</p>
+                          <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1">Unpaid</p>
                           <p className="text-sm font-black text-amber-400">{formatCurrency(payout.total_unpaid || 0)}</p>
                         </div>
-                        <div className="px-6 py-4 rounded-2xl bg-white/5 border border-white/5 text-right">
-                          <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1">Total Paid</p>
+                        <div className="px-6 py-4 rounded-2xl bg-emerald-600/5 border border-emerald-500/10 text-right">
+                          <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1">Paid</p>
                           <p className="text-sm font-black text-emerald-400">{formatCurrency(payout.total_paid || 0)}</p>
                         </div>
                       </div>
                     </div>
-
                     <div className="flex items-center gap-4 pt-10 border-t border-white/5">
-                      <input 
-                        className="elite-input flex-1" 
-                        placeholder="Transaction Token (UTR/ID)..." 
-                        value={payoutReferenceDrafts[payout.seller_id]}
-                        onChange={(e) => setPayoutReferenceDrafts({...payoutReferenceDrafts, [payout.seller_id]: e.target.value})}
-                      />
-                      <button 
-                        onClick={() => handleMarkSellerPaid(payout.seller_id, payout.items.filter(i => i.payout_status !== 'paid').map(i => i.order_item_id))}
-                        disabled={!payout.total_unpaid}
-                        className="btn-elite px-10 py-5 text-[10px] disabled:opacity-20"
-                      >
-                        MARK AS PAID
-                      </button>
+                      <input className="elite-input flex-1" placeholder="Transaction Reference..." value={payoutReferenceDrafts[payout.seller_id]} onChange={(e) => setPayoutReferenceDrafts({...payoutReferenceDrafts, [payout.seller_id]: e.target.value})} />
+                      <button onClick={() => handleMarkSellerPaid(payout.seller_id, payout.items.filter(i => i.payout_status !== 'paid').map(i => i.order_item_id))} disabled={!payout.total_unpaid} className="btn-elite px-10 py-5 text-[10px] disabled:opacity-20">SET AS PAID</button>
                     </div>
                   </div>
                 ))}
@@ -569,12 +497,12 @@ export default function AdminDashboardPage() {
 
             {activeTab === 'analytics' && (
               <div className="space-y-12">
-                <div className="glass-card p-10 h-[500px]">
+                <div className="glass-card p-10 h-[500px] border border-white/5">
                   <Line
                     data={{
                       labels: analytics ? Object.keys(analytics.dailySales) : [],
                       datasets: [{
-                        label: 'Sales Velocity (INR)',
+                        label: 'Gross Sales Velocity',
                         data: analytics ? Object.values(analytics.dailySales) : [],
                         borderColor: '#6366f1',
                         backgroundColor: 'rgba(99, 102, 241, 0.1)',
@@ -588,20 +516,28 @@ export default function AdminDashboardPage() {
               </div>
             )}
 
-            {activeTab === 'support' && (
-              <div className="space-y-4">
-                {supportTickets.map(ticket => (
-                  <div key={ticket.id} className="glass-card p-8">
-                    <div className="flex justify-between items-start mb-4">
-                      <h3 className="text-lg font-black uppercase tracking-tighter">{ticket.subject}</h3>
-                      <span className="px-3 py-1 rounded-full bg-indigo-500/10 text-indigo-400 text-[8px] font-black uppercase tracking-widest">{ticket.status}</span>
+            {activeTab === 'returns' && (
+              <div className="space-y-6">
+                <h2 className="text-xl font-black uppercase tracking-tighter">Reverse Logistics</h2>
+                {returns.length === 0 ? <p className="text-slate-500 font-black uppercase tracking-widest py-10">No active returns</p> : (
+                  returns.map(ret => (
+                    <div key={ret.id} className="glass-card p-8 flex flex-col md:flex-row justify-between items-center gap-8 border border-white/5">
+                      <div>
+                        <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-2">ID: #{ret.id.slice(0,8)}</p>
+                        <h3 className="text-lg font-black uppercase tracking-tight">{ret.order_item?.product?.name}</h3>
+                        <p className="text-xs text-slate-500">Reason: {ret.reason}</p>
+                      </div>
+                      <div className="flex gap-4">
+                        <button onClick={() => handleProcessReturn(ret.id, 'approved')} className="px-6 py-3 bg-indigo-600 rounded-xl text-[10px] font-black">APPROVE</button>
+                        <button onClick={() => handleProcessReturn(ret.id, 'refunded')} className="px-6 py-3 bg-emerald-600 rounded-xl text-[10px] font-black">REFUNDED</button>
+                        <button onClick={() => handleProcessReturn(ret.id, 'rejected')} className="px-6 py-3 bg-rose-600 rounded-xl text-[10px] font-black">REJECT</button>
+                      </div>
                     </div>
-                    <p className="text-slate-400 text-sm mb-6">{ticket.description}</p>
-                    <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest">User Email: {ticket.user?.email}</p>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             )}
+
           </div>
         </main>
       </div>
