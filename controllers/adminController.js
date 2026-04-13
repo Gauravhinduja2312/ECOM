@@ -8,57 +8,42 @@ const {
 
 async function getAnalytics(req, res) {
   try {
-    const { data: orders, error: ordersError } = await supabaseAdmin
-      .from('orders')
-      .select('id, user_id, total_price, status, delivery_fee, created_at');
+    const [{ data: ordersRaw, error: ordersError }, { data: usersRaw, error: usersError }, { data: itemsRaw, error: itemsError }, { data: productsRaw, error: productsError }] = await Promise.all([
+        supabaseAdmin.from('orders').select('id, user_id, total_price, status, delivery_fee, created_at'),
+        supabaseAdmin.from('users').select('id, email, role'),
+        supabaseAdmin.from('order_items').select('commission_amount, seller_earning'),
+        supabaseAdmin.from('products').select('seller_id, listing_fee, is_sponsored, sponsored_fee, stock')
+    ]);
 
-    if (ordersError) {
-      return res.status(500).json({ error: ordersError.message });
+    if (ordersError || usersError || itemsError || productsError) {
+      return res.status(500).json({ error: 'Database synchronization failed' });
     }
 
-    const { data: users, error: usersError } = await supabaseAdmin
-      .from('users')
-      .select('id, email, role');
-
-    if (usersError) {
-      return res.status(500).json({ error: usersError.message });
-    }
-
-    const { data: orderItems, error: orderItemsError } = await supabaseAdmin
-      .from('order_items')
-      .select('commission_amount, seller_earning');
-
-    if (orderItemsError) {
-      return res.status(500).json({ error: orderItemsError.message });
-    }
-
-    const { data: products, error: productsError } = await supabaseAdmin
-      .from('products')
-      .select('seller_id, listing_fee, is_sponsored, sponsored_fee, stock');
-
-    if (productsError) {
-      return res.status(500).json({ error: productsError.message });
-    }
+    const orders = ordersRaw || [];
+    const users = usersRaw || [];
+    const orderItems = itemsRaw || [];
+    const products = productsRaw || [];
 
     const validStatus = ['order_placed', 'processing', 'ready_for_pickup', 'shipped', 'completed'];
     const totalRevenue = orders
       .filter((o) => validStatus.includes(o.status))
-      .reduce((sum, o) => sum + Number(o.total_price), 0);
+      .reduce((sum, o) => sum + (Number(o.total_price) || 0), 0);
 
     const dailySalesMap = {};
     const monthlySalesMap = {};
 
     orders.forEach((order) => {
       const createdAt = new Date(order.created_at);
+      if (Number.isNaN(createdAt.getTime())) return;
       const dayKey = createdAt.toISOString().split('T')[0];
       const monthKey = `${createdAt.getFullYear()}-${String(createdAt.getMonth() + 1).padStart(2, '0')}`;
-      dailySalesMap[dayKey] = (dailySalesMap[dayKey] || 0) + Number(order.total_price);
-      monthlySalesMap[monthKey] = (monthlySalesMap[monthKey] || 0) + Number(order.total_price);
+      dailySalesMap[dayKey] = (dailySalesMap[dayKey] || 0) + (Number(order.total_price) || 0);
+      monthlySalesMap[monthKey] = (monthlySalesMap[monthKey] || 0) + (Number(order.total_price) || 0);
     });
 
     const userSpendingMap = {};
     orders.forEach((order) => {
-      userSpendingMap[order.user_id] = (userSpendingMap[order.user_id] || 0) + Number(order.total_price);
+      userSpendingMap[order.user_id] = (userSpendingMap[order.user_id] || 0) + (Number(order.total_price) || 0);
     });
 
     const crmUsers = users.map((user) => ({
@@ -67,29 +52,12 @@ async function getAnalytics(req, res) {
       orders_count: orders.filter((o) => o.user_id === user.id).length,
     }));
 
-    const totalCommission = (orderItems || []).reduce(
-      (sum, item) => sum + Number(item.commission_amount || 0),
-      0
-    );
-
-    const totalLogisticsRevenue = orders
-      .filter((o) => validStatus.includes(o.status))
-      .reduce((sum, o) => sum + Number(o.delivery_fee || 0), 0);
-
-    const totalSellerPayout = (orderItems || []).reduce(
-      (sum, item) => sum + Number(item.seller_earning || 0),
-      0
-    );
-
-    const totalListingFees = (products || [])
-      .filter((product) => Boolean(product.seller_id))
-      .reduce((sum, product) => sum + Number(product.listing_fee || 0), 0);
-
-    const totalSponsoredFees = (products || [])
-      .filter((product) => Boolean(product.seller_id) && Boolean(product.is_sponsored))
-      .reduce((sum, product) => sum + Number(product.sponsored_fee || 0), 0);
-
-    const lowStockCount = (products || []).filter((product) => Number(product.stock || 0) > 0 && Number(product.stock || 0) < 3).length;
+    const totalCommission = orderItems.reduce((sum, item) => sum + (Number(item.commission_amount) || 0), 0);
+    const totalLogisticsRevenue = orders.filter((o) => validStatus.includes(o.status)).reduce((sum, o) => sum + (Number(o.delivery_fee) || 0), 0);
+    const totalSellerPayout = orderItems.reduce((sum, item) => sum + (Number(item.seller_earning) || 0), 0);
+    const totalListingFees = products.filter(p => !!p.seller_id).reduce((sum, p) => sum + (Number(p.listing_fee) || 0), 0);
+    const totalSponsoredFees = products.filter(p => !!p.seller_id && p.is_sponsored).reduce((sum, p) => sum + (Number(p.sponsored_fee) || 0), 0);
+    const lowStockCount = products.filter(p => (Number(p.stock) || 0) > 0 && (Number(p.stock) || 0) < 3).length;
 
     return res.json({
       totalRevenue,
@@ -236,7 +204,7 @@ async function getOrders(req, res) {
       });
     }
 
-    return res.json({ orders, orderItems: itemsByOrderId });
+    return res.json({ orders: orders || [], orderItems: itemsByOrderId });
   } catch (error) {
     return res.status(500).json({ error: error.message || 'Failed to fetch orders' });
   }

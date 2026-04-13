@@ -5,6 +5,7 @@ import { supabase } from '../services/supabaseClient';
 import { socketService } from '../services/socket';
 import { useToast } from '../services/ToastContext';
 import Loader from '../components/Loader';
+import { generateAndDownloadInvoice } from '../utils/invoiceGenerator';
 
 export default function AdminDashboardPage() {
   const { session, profile } = useAuth();
@@ -17,7 +18,7 @@ export default function AdminDashboardPage() {
   const [activeTicket, setActiveTicket] = useState(null);
   const [ticketMessages, setTicketMessages] = useState([]);
   const [chatInput, setChatInput] = useState('');
-  const [activeTab, setActiveTab] = useState('hub'); // 'hub', 'scm', 'crm', 'orders', 'chat', 'analytics'
+  const [activeTab, setActiveTab] = useState('hub');
   const [loading, setLoading] = useState(true);
   const scrollRef = useRef(null);
 
@@ -83,7 +84,27 @@ export default function AdminDashboardPage() {
     setChatInput('');
   };
 
-  if (loading) return <Loader text="Synchronizing Admin Command Center..." />;
+  const handleReview = async (id, action, p) => {
+     try {
+        await apiRequest(`/api/admin/product-submissions/${id}/review`, 'PATCH', session.access_token, { action, proposedPrice: p });
+        addToast('Action synchronized successfully.', 'success');
+        fetchData();
+     } catch (e) {
+        addToast(e.message, 'error');
+     }
+  };
+
+  const handleUpdateOrderStatus = async (id, status) => {
+     try {
+        await apiRequest(`/api/admin/orders/${id}/status`, 'PATCH', session.access_token, { status });
+        addToast('Order finalized.', 'success');
+        fetchData();
+     } catch (e) {
+        addToast(e.message, 'error');
+     }
+  };
+
+  if (loading && activeTab === 'hub') return <Loader text="Synchronizing Admin Command Center..." />;
 
   const DashboardTile = ({ title, sub, icon, color, tab }) => (
     <button 
@@ -127,17 +148,16 @@ export default function AdminDashboardPage() {
             <DashboardTile title="Revenue Center" sub="Financial Intelligence" icon="📊" color="amber" tab="analytics" />
             <DashboardTile title="Support Chat" sub="Real-time Messaging" icon="💬" color="rose" tab="chat" />
             
-            {/* Quick Stats in Tile format */}
-            <div className="md:col-span-2 glass-elite p-8 rounded-[2rem] border border-white/5 flex flex-col justify-center">
-               <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Network Health</p>
-               <div className="flex gap-10">
+            <div className="md:col-span-2 glass-elite p-10 rounded-[2.5rem] border border-white/5 flex flex-col justify-center">
+               <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-6">Network Intelligence</p>
+               <div className="grid grid-cols-2 gap-10">
                   <div>
-                    <h4 className="text-3xl font-black">{analytics?.totalOrders || 0}</h4>
-                    <p className="text-[9px] uppercase font-bold text-slate-600">Total volume</p>
+                    <h4 className="text-4xl font-black">{analytics?.totalOrders || 0}</h4>
+                    <p className="text-[9px] uppercase font-bold text-slate-600 mt-1">Order Pipeline Volume</p>
                   </div>
                   <div>
-                    <h4 className="text-3xl font-black text-indigo-500">₹{analytics?.totalRevenue || 0}</h4>
-                    <p className="text-[9px] uppercase font-bold text-slate-600">Total GPV</p>
+                    <h4 className="text-4xl font-black text-indigo-500">₹{analytics?.totalRevenue || 0}</h4>
+                    <p className="text-[9px] uppercase font-bold text-slate-600 mt-1">Gross Merchandise Value</p>
                   </div>
                </div>
             </div>
@@ -156,18 +176,59 @@ export default function AdminDashboardPage() {
                { id: 'reject', label: 'Rejection Bin', items: submissions.filter(s => s.verification_status === 'rejected') },
              ].map(col => (
                <div key={col.id} className="flex flex-col gap-4">
-                  <div className="flex justify-between items-center px-2">
+                  <div className="flex justify-between items-center px-2 mb-2">
                     <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500">{col.label}</h3>
-                    <span className="text-[9px] bg-white/5 px-2 py-0.5 rounded text-slate-400">{col.items.length}</span>
+                    <span className="text-[9px] bg-white/5 px-2 py-0.5 rounded text-slate-400 font-bold">{col.items.length}</span>
                   </div>
                   {col.items.map(p => (
-                    <div key={p.id} className="glass-card p-5 border border-white/5 hover:border-white/10 transition-colors">
-                      <p className="text-xs font-black uppercase tracking-tight truncate">{p.name}</p>
-                      <p className="text-[9px] text-slate-500 mt-1">₹{p.price} • {p.seller_email}</p>
+                    <div key={p.id} className="glass-card p-6 border border-white/5 hover:border-indigo-500/20 transition-all group">
+                      <p className="text-sm font-black uppercase tracking-tight truncate">{p.name}</p>
+                      <p className="text-[9px] text-indigo-400 mt-1 font-black">₹{p.price} • {p.seller_email}</p>
+                      <div className="mt-4 pt-4 border-t border-white/5 flex gap-2">
+                        {p.verification_status === 'pending' && (
+                          <button onClick={() => handleReview(p.id, 'verify')} className="flex-1 py-2 bg-indigo-600 rounded-xl text-[9px] font-black tracking-widest uppercase">Verify</button>
+                        )}
+                        {p.verification_status === 'verified' && p.handover_status !== 'confirmed' && (
+                             <div className="w-full text-center py-2 bg-amber-500/10 text-amber-500 rounded-xl text-[9px] font-black uppercase tracking-widest">Awaiting Handover</div>
+                        )}
+                      </div>
                     </div>
                   ))}
                </div>
              ))}
+          </div>
+        )}
+
+        {activeTab === 'orders' && (
+          <div className="glass-elite rounded-[2.5rem] p-10 space-y-4 animate-in fade-in duration-500">
+             <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-6">Live Fulfillment Queue</h3>
+             <div className="space-y-4">
+               {orders.map(order => (
+                 <div key={order.id} className="glass-card p-6 flex flex-col md:flex-row justify-between items-center gap-6 border border-white/5">
+                    <div className="flex-1">
+                       <p className="text-sm font-black uppercase tracking-tight">Order #{order.id} • SKU: {(orderItems[order.id] || []).length} items</p>
+                       <p className="text-[9px] text-slate-500 mt-1 uppercase font-black">Status: <span className="text-indigo-400">{order.status.replace('_', ' ')}</span> • Total: ₹{order.total_price}</p>
+                    </div>
+                    <div className="flex gap-4">
+                       <select 
+                         onChange={(e) => handleUpdateOrderStatus(order.id, e.target.value)}
+                         className="elite-input rounded-xl text-[9px] font-black px-4 py-3 bg-[#0f172a]"
+                         value={order.status}
+                       >
+                          <option value="order_placed">Placed</option>
+                          <option value="processing">Processing</option>
+                          <option value="ready_for_pickup">Ready</option>
+                          <option value="shipped">Shipped</option>
+                          <option value="completed">Completed</option>
+                       </select>
+                       <button 
+                         onClick={() => generateAndDownloadInvoice(order, orderItems[order.id] || [])}
+                         className="px-6 py-3 bg-white/5 hover:bg-white/10 rounded-xl text-[9px] font-black uppercase tracking-widest transition-colors"
+                       >Invoice</button>
+                    </div>
+                 </div>
+               ))}
+             </div>
           </div>
         )}
 
@@ -217,6 +278,44 @@ export default function AdminDashboardPage() {
                       <p className="text-[10px] font-black uppercase tracking-widest">Select a ticket to begin</p>
                    </div>
                  )}
+              </div>
+           </div>
+        )}
+
+        {activeTab === 'crm' && (
+           <div className="glass-elite rounded-[2.5rem] p-10 space-y-6">
+              <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Account Relationship Management</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {(analytics?.crmUsers || []).map(u => (
+                  <div key={u.id} className="glass-card p-6 border border-white/5 flex justify-between items-center group">
+                     <div>
+                        <p className="text-sm font-black uppercase tracking-tight">{u.email}</p>
+                        <p className="text-[9px] uppercase font-black text-slate-600 mt-1">{u.role} • LTV: ₹{u.total_spending || 0}</p>
+                     </div>
+                     <span className="h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]" title="Active Account"></span>
+                  </div>
+                ))}
+              </div>
+           </div>
+        )}
+
+        {activeTab === 'analytics' && (
+           <div className="glass-elite rounded-[2.5rem] p-10 flex flex-col items-center justify-center h-[500px]">
+              <span className="text-6xl mb-8">📈</span>
+              <h3 className="text-2xl font-black uppercase tracking-tighter">Financial Intelligence Suite</h3>
+              <div className="grid grid-cols-3 gap-8 mt-12 w-full max-w-2xl text-center">
+                 <div className="glass-card p-6">
+                    <p className="text-2xl font-black">₹{analytics?.totalCommission || 0}</p>
+                    <p className="text-[9px] uppercase font-bold text-slate-600">Platform Revenue</p>
+                 </div>
+                 <div className="glass-card p-6">
+                    <p className="text-2xl font-black">₹{analytics?.totalLogisticsRevenue || 0}</p>
+                    <p className="text-[9px] uppercase font-bold text-slate-600">Logistics Income</p>
+                 </div>
+                 <div className="glass-card p-6">
+                    <p className="text-2xl font-black">{analytics?.lowStockCount || 0}</p>
+                    <p className="text-[9px] uppercase font-bold text-slate-600">Stock Alerts</p>
+                 </div>
               </div>
            </div>
         )}
