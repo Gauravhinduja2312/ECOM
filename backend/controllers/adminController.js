@@ -238,68 +238,12 @@ async function reviewProductSubmission(req, res) {
       .eq('id', productId)
       .select('*')
       .single();
-    const dailySalesMap = {};
-    const monthlySalesMap = {};
-
-    orders.forEach((order) => {
-      const createdAt = new Date(order.created_at);
-      const dayKey = createdAt.toISOString().split('T')[0];
-      const monthKey = `${createdAt.getFullYear()}-${String(createdAt.getMonth() + 1).padStart(2, '0')}`;
-      dailySalesMap[dayKey] = (dailySalesMap[dayKey] || 0) + Number(order.total_price);
-      monthlySalesMap[monthKey] = (monthlySalesMap[monthKey] || 0) + Number(order.total_price);
-    });
-
-    const userSpendingMap = {};
-    orders.forEach((order) => {
-      userSpendingMap[order.user_id] = (userSpendingMap[order.user_id] || 0) + Number(order.total_price);
-    });
-
-    const crmUsers = users.map((user) => ({
-      ...user,
-      total_spending: userSpendingMap[user.id] || 0,
-      orders_count: orders.filter((o) => o.user_id === user.id).length,
-    }));
-
-    const totalCommission = (orderItems || []).reduce(
-      (sum, item) => sum + Number(item.commission_amount || 0),
-      0
-    );
-
-    const totalLogisticsRevenue = orders
-      .filter((o) => ['order_placed', 'processing', 'ready_for_pickup', 'shipped', 'completed'].includes(o.status))
-      .reduce((sum, o) => sum + Number(o.delivery_fee || 0), 0);
-
-    const totalSellerPayout = (orderItems || []).reduce(
-      (sum, item) => sum + Number(item.seller_earning || 0),
-      0
-    );
-
-    const totalListingFees = (products || [])
-      .filter((product) => Boolean(product.seller_id))
-      .reduce((sum, product) => sum + Number(product.listing_fee || 0), 0);
-
-    const totalSponsoredFees = (products || [])
-      .filter((product) => Boolean(product.seller_id) && Boolean(product.is_sponsored))
-      .reduce((sum, product) => sum + Number(product.sponsored_fee || 0), 0);
-
-    const lowStockCount = (products || []).filter((product) => Number(product.stock || 0) > 0 && Number(product.stock || 0) < 3).length;
-
     return res.json({
-      totalRevenue,
-      totalCommission,
-      totalSellerPayout,
-      totalListingFees,
-      totalSponsoredFees,
-      totalLogisticsRevenue,
-      totalOrders: orders.length,
-      totalUsers: users.length,
-      lowStockCount,
-      dailySales: dailySalesMap,
-      monthlySales: monthlySalesMap,
-      crmUsers,
+      success: true,
+      product: updatedProduct,
     });
   } catch (error) {
-    return res.status(500).json({ error: error.message || 'Failed to fetch analytics' });
+    return res.status(500).json({ error: error.message || 'Failed to review submission' });
   }
 }
 
@@ -825,6 +769,7 @@ module.exports = {
   getSellerPayouts,
   markSellerPayoutsPaid,
   updateOrderStatus,
+  getOrders,
   verifyHandoverCode,
   processReturn,
 };

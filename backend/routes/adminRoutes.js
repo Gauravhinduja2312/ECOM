@@ -6,6 +6,7 @@ const {
   getSellerPayouts,
   markSellerPayoutsPaid,
   updateOrderStatus,
+  getOrders,
 } = require('../controllers/adminController');
 const { acquireProductInventory } = require('../controllers/productController');
 const { requireAuth } = require('../middleware/auth');
