@@ -3,16 +3,23 @@ const { createClient } = require('@supabase/supabase-js');
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
-async function diagnostic() {
-  console.log('--- Checking USERS table ---');
-  const { data: users, error: uError, count: uCount } = await supabase.from('users').select('*', { count: 'exact' });
-  if (uError) console.error('Users Error:', uError.message);
-  else console.log(`Users Found: ${uCount}`, users?.length ? users[0] : 'EMPTY');
-
-  console.log('--- Checking ORDERS table ---');
-  const { data: orders, error: oError, count: oCount } = await supabase.from('orders').select('*', { count: 'exact' });
-  if (oError) console.error('Orders Error:', oError.message);
-  else console.log(`Orders Found: ${oCount}`, orders?.length ? orders[0] : 'EMPTY');
+async function fullDiagnostic() {
+  const tables = ['users', 'orders', 'order_items', 'products', 'inventory_logs'];
+  
+  for (const table of tables) {
+    console.log(`--- Checking ${table.toUpperCase()} ---`);
+    const { data, error, count } = await supabase.from(table).select('*', { count: 'exact' }).limit(1);
+    if (error) {
+       console.error(`${table} Error:`, error.message);
+    } else {
+       console.log(`${table} Count:`, count);
+       if (data && data.length > 0) {
+          console.log(`${table} Columns:`, Object.keys(data[0]).join(', '));
+       } else {
+          console.log(`${table}: EMPTY`);
+       }
+    }
+  }
 }
 
-diagnostic();
+fullDiagnostic();

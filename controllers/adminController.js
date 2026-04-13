@@ -9,13 +9,14 @@ const {
 async function getAnalytics(req, res) {
   try {
     const [{ data: ordersRaw, error: ordersError }, { data: usersRaw, error: usersError }, { data: itemsRaw, error: itemsError }, { data: productsRaw, error: productsError }] = await Promise.all([
-        supabaseAdmin.from('orders').select('id, user_id, total_price, status, delivery_fee, created_at'),
+        supabaseAdmin.from('orders').select('id, user_id, total_price, status, created_at'),
         supabaseAdmin.from('users').select('id, email, role'),
         supabaseAdmin.from('order_items').select('commission_amount, seller_earning'),
         supabaseAdmin.from('products').select('seller_id, listing_fee, is_sponsored, sponsored_fee, stock')
     ]);
 
     if (ordersError || usersError || itemsError || productsError) {
+      console.error('Analytics Fetch Error:', { ordersError, usersError, itemsError, productsError });
       return res.status(500).json({ error: 'Database synchronization failed' });
     }
 
@@ -53,7 +54,7 @@ async function getAnalytics(req, res) {
     }));
 
     const totalCommission = orderItems.reduce((sum, item) => sum + (Number(item.commission_amount) || 0), 0);
-    const totalLogisticsRevenue = orders.filter((o) => validStatus.includes(o.status)).reduce((sum, o) => sum + (Number(o.delivery_fee) || 0), 0);
+    const totalLogisticsRevenue = 0; // delivery_fee missing in schema
     const totalSellerPayout = orderItems.reduce((sum, item) => sum + (Number(item.seller_earning) || 0), 0);
     const totalListingFees = products.filter(p => !!p.seller_id).reduce((sum, p) => sum + (Number(p.listing_fee) || 0), 0);
     const totalSponsoredFees = products.filter(p => !!p.seller_id && p.is_sponsored).reduce((sum, p) => sum + (Number(p.sponsored_fee) || 0), 0);
@@ -74,6 +75,7 @@ async function getAnalytics(req, res) {
       crmUsers,
     });
   } catch (error) {
+    console.error('getAnalytics Internal Error:', error);
     return res.status(500).json({ error: error.message || 'Failed to fetch analytics' });
   }
 }
