@@ -27,6 +27,7 @@ export default function AdminDashboardPage() {
     if (!session?.access_token) return;
     setLoading(true);
     try {
+      console.log('--- ADMIN SYNC START ---');
       const [analyticsRes, submissionsRes, ordersRes, logsRes] = await Promise.allSettled([
         apiRequest('/api/admin/analytics', 'GET', session.access_token),
         apiRequest('/api/admin/product-submissions', 'GET', session.access_token),
@@ -34,21 +35,32 @@ export default function AdminDashboardPage() {
         supabase.from('inventory_logs').select('*, product:products(name)').order('created_at', { ascending: false }).limit(50),
       ]);
 
-      if (analyticsRes.status === 'fulfilled') setAnalytics(analyticsRes.value);
+      if (analyticsRes.status === 'fulfilled') {
+          console.log('Analytics synced:', analyticsRes.value);
+          setAnalytics(analyticsRes.value);
+      } else {
+          console.error('Analytics failed:', analyticsRes.reason);
+      }
+
       if (submissionsRes.status === 'fulfilled') setSubmissions(submissionsRes.value.submissions || []);
       if (ordersRes.status === 'fulfilled') {
         setOrders(ordersRes.value.orders || []);
         setOrderItems(ordersRes.value.orderItems || {});
       }
-      if (logsRes.status === 'fulfilled') setInventoryLogs(logsRes.value.data || []);
+      if (logsRes.status === 'fulfilled') {
+          console.log('Logs synced:', logsRes.value.data);
+          setInventoryLogs(logsRes.value.data || []);
+      }
 
       const { data: tickets } = await supabase.from('support_tickets').select('*, user:users(id, email, pseudonym)').order('updated_at', { ascending: false });
       setSupportTickets(tickets || []);
 
     } catch (err) {
+      console.error('CRITICAL SYNC ERROR:', err);
       addToast('Data synchronization failed.', 'error');
     } finally {
       setLoading(false);
+      console.log('--- ADMIN SYNC COMPLETE ---');
     }
   };
 
@@ -142,6 +154,7 @@ export default function AdminDashboardPage() {
             </h1>
             <p className="text-[10px] uppercase font-black tracking-[0.4em] text-slate-500 mt-2">Elite Operations Suite</p>
           </div>
+          <button onClick={fetchData} className="px-8 py-3 bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl text-[10px] font-black tracking-widest uppercase transition-all">Manual Sync</button>
         </div>
 
         {activeTab === 'hub' && (
@@ -183,7 +196,7 @@ export default function AdminDashboardPage() {
                     <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500">{col.label}</h3>
                     <span className="text-[9px] bg-white/5 px-2 py-0.5 rounded text-slate-400 font-bold">{col.items.length}</span>
                   </div>
-                  {col.items.map(p => (
+                  {col.items.length > 0 ? col.items.map(p => (
                     <div key={p.id} className="glass-card p-6 border border-white/5 hover:border-indigo-500/20 transition-all group">
                       <p className="text-sm font-black uppercase tracking-tight truncate">{p.name}</p>
                       <p className="text-[9px] text-indigo-400 mt-1 font-black">₹{p.price} • {p.seller_email}</p>
@@ -196,7 +209,9 @@ export default function AdminDashboardPage() {
                         )}
                       </div>
                     </div>
-                  ))}
+                  )) : (
+                    <p className="text-[9px] font-black uppercase text-slate-700 text-center py-10 tracking-widest opacity-30">NO DATA</p>
+                  )}
                </div>
              ))}
           </div>
@@ -206,10 +221,10 @@ export default function AdminDashboardPage() {
           <div className="glass-elite rounded-[2.5rem] p-10 space-y-4 animate-in fade-in duration-500">
              <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-6">Live Fulfillment Queue</h3>
              <div className="space-y-4">
-               {orders.map(order => (
+               {orders.length > 0 ? orders.map(order => (
                  <div key={order.id} className="glass-card p-6 flex flex-col md:flex-row justify-between items-center gap-6 border border-white/5">
                     <div className="flex-1">
-                       <p className="text-sm font-black uppercase tracking-tight">Order #{order.id} • SKU: {(orderItems[order.id] || []).length} items</p>
+                       <p className="text-sm font-black uppercase tracking-tight">Order #{order.id} • {(orderItems[order.id] || []).length} items</p>
                        <p className="text-[9px] text-slate-500 mt-1 uppercase font-black">Status: <span className="text-indigo-400">{order.status.replace('_', ' ')}</span> • Total: ₹{order.total_price}</p>
                     </div>
                     <div className="flex gap-4">
@@ -230,7 +245,9 @@ export default function AdminDashboardPage() {
                        >Invoice</button>
                     </div>
                  </div>
-               ))}
+               )) : (
+                 <div className="py-20 text-center opacity-20 uppercase font-black tracking-widest text-sm">No orders recorded in the network</div>
+               )}
              </div>
           </div>
         )}
@@ -289,15 +306,17 @@ export default function AdminDashboardPage() {
            <div className="glass-elite rounded-[2.5rem] p-10 space-y-6 animate-in slide-in-from-top-4 duration-500">
               <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Account Relationship Management</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {(analytics?.crmUsers || []).map(u => (
+                {analytics?.crmUsers && analytics.crmUsers.length > 0 ? analytics.crmUsers.map(u => (
                   <div key={u.id} className="glass-card p-6 border border-white/5 flex justify-between items-center group hover:border-indigo-500/30 transition-all">
                      <div>
                         <p className="text-sm font-black uppercase tracking-tight">{u.email}</p>
                         <p className="text-[9px] uppercase font-black text-slate-600 mt-1">{u.role} • LTV: ₹{u.total_spending || 0} • Orders: {u.orders_count || 0}</p>
                      </div>
-                     <span className="h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]"></span>
+                     <span className={`h-2 w-2 rounded-full ${u.role === 'admin' ? 'bg-indigo-500' : 'bg-emerald-500'} shadow-[0_0_10px_rgba(16,185,129,0.5)]`}></span>
                   </div>
-                ))}
+                )) : (
+                  <div className="col-span-2 py-20 text-center opacity-20 uppercase font-black tracking-[0.3em] text-sm">User Directory Synchronization Empty</div>
+                )}
               </div>
            </div>
         )}
@@ -327,7 +346,7 @@ export default function AdminDashboardPage() {
            <div className="glass-elite rounded-[2.5rem] p-10 animate-in fade-in duration-500">
               <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-6">Inventory Audit & Operation Trail</h3>
               <div className="space-y-3">
-                 {inventoryLogs.map((log, i) => (
+                 {inventoryLogs.length > 0 ? inventoryLogs.map((log, i) => (
                     <div key={i} className="glass-card p-5 flex justify-between items-center border border-white/5 hover:bg-white/[0.02] transition-colors">
                        <div className="flex items-center gap-6">
                           <span className={`h-1.5 w-1.5 rounded-full ${log.change_type === 'sale' ? 'bg-indigo-500' : 'bg-emerald-500'}`}></span>
@@ -338,7 +357,9 @@ export default function AdminDashboardPage() {
                        </div>
                        <p className="text-[9px] font-black text-slate-700">{new Date(log.created_at).toLocaleString()}</p>
                     </div>
-                 ))}
+                 )) : (
+                    <div className="py-20 text-center opacity-20 uppercase font-black tracking-widest text-xs">No operational logs found in current audit cycle</div>
+                 )}
               </div>
            </div>
         )}
