@@ -66,7 +66,7 @@ function buildListingInsertPayload(draft, userId) {
   };
 }
 
-async function createProductOffer(req, res) {
+async function storeProductOffer(req, res) {
   try {
     const draft = normalizeListingDraft(req.body?.listingDraft);
     const productPayload = buildListingInsertPayload(draft, req.user.id);
@@ -353,9 +353,10 @@ async function acquireProductInventory(req, res) {
 }
 
 module.exports = {
-  createProductOffer,
+  storeProductOffer,
   respondToPriceOffer,
   getRecommendedProducts,
   getLowStockProducts,
   acquireProductInventory,
+  updateHandoverDetails,
 };
