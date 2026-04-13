@@ -20,16 +20,18 @@ export default function AdminDashboardPage() {
   const [chatInput, setChatInput] = useState('');
   const [activeTab, setActiveTab] = useState('hub');
   const [loading, setLoading] = useState(true);
+  const [inventoryLogs, setInventoryLogs] = useState([]);
   const scrollRef = useRef(null);
 
   const fetchData = async () => {
     if (!session?.access_token) return;
     setLoading(true);
     try {
-      const [analyticsRes, submissionsRes, ordersRes] = await Promise.allSettled([
+      const [analyticsRes, submissionsRes, ordersRes, logsRes] = await Promise.allSettled([
         apiRequest('/api/admin/analytics', 'GET', session.access_token),
         apiRequest('/api/admin/product-submissions', 'GET', session.access_token),
         apiRequest('/api/admin/orders', 'GET', session.access_token),
+        supabase.from('inventory_logs').select('*, product:products(name)').order('created_at', { ascending: false }).limit(50),
       ]);
 
       if (analyticsRes.status === 'fulfilled') setAnalytics(analyticsRes.value);
@@ -38,6 +40,7 @@ export default function AdminDashboardPage() {
         setOrders(ordersRes.value.orders || []);
         setOrderItems(ordersRes.value.orderItems || {});
       }
+      if (logsRes.status === 'fulfilled') setInventoryLogs(logsRes.value.data || []);
 
       const { data: tickets } = await supabase.from('support_tickets').select('*, user:users(id, email, pseudonym)').order('updated_at', { ascending: false });
       setSupportTickets(tickets || []);
@@ -283,16 +286,16 @@ export default function AdminDashboardPage() {
         )}
 
         {activeTab === 'crm' && (
-           <div className="glass-elite rounded-[2.5rem] p-10 space-y-6">
+           <div className="glass-elite rounded-[2.5rem] p-10 space-y-6 animate-in slide-in-from-top-4 duration-500">
               <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Account Relationship Management</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {(analytics?.crmUsers || []).map(u => (
-                  <div key={u.id} className="glass-card p-6 border border-white/5 flex justify-between items-center group">
+                  <div key={u.id} className="glass-card p-6 border border-white/5 flex justify-between items-center group hover:border-indigo-500/30 transition-all">
                      <div>
                         <p className="text-sm font-black uppercase tracking-tight">{u.email}</p>
-                        <p className="text-[9px] uppercase font-black text-slate-600 mt-1">{u.role} • LTV: ₹{u.total_spending || 0}</p>
+                        <p className="text-[9px] uppercase font-black text-slate-600 mt-1">{u.role} • LTV: ₹{u.total_spending || 0} • Orders: {u.orders_count || 0}</p>
                      </div>
-                     <span className="h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]" title="Active Account"></span>
+                     <span className="h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]"></span>
                   </div>
                 ))}
               </div>
@@ -300,7 +303,7 @@ export default function AdminDashboardPage() {
         )}
 
         {activeTab === 'analytics' && (
-           <div className="glass-elite rounded-[2.5rem] p-10 flex flex-col items-center justify-center h-[500px]">
+           <div className="glass-elite rounded-[2.5rem] p-10 flex flex-col items-center justify-center h-[500px] animate-in zoom-in-95 duration-500">
               <span className="text-6xl mb-8">📈</span>
               <h3 className="text-2xl font-black uppercase tracking-tighter">Financial Intelligence Suite</h3>
               <div className="grid grid-cols-3 gap-8 mt-12 w-full max-w-2xl text-center">
@@ -316,6 +319,26 @@ export default function AdminDashboardPage() {
                     <p className="text-2xl font-black">{analytics?.lowStockCount || 0}</p>
                     <p className="text-[9px] uppercase font-bold text-slate-600">Stock Alerts</p>
                  </div>
+              </div>
+           </div>
+        )}
+
+        {activeTab === 'logs' && (
+           <div className="glass-elite rounded-[2.5rem] p-10 animate-in fade-in duration-500">
+              <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-6">Inventory Audit & Operation Trail</h3>
+              <div className="space-y-3">
+                 {inventoryLogs.map((log, i) => (
+                    <div key={i} className="glass-card p-5 flex justify-between items-center border border-white/5 hover:bg-white/[0.02] transition-colors">
+                       <div className="flex items-center gap-6">
+                          <span className={`h-1.5 w-1.5 rounded-full ${log.change_type === 'sale' ? 'bg-indigo-500' : 'bg-emerald-500'}`}></span>
+                          <div>
+                             <p className="text-xs font-black uppercase tracking-tight">{log.product?.name || 'Unknown Product'}</p>
+                             <p className="text-[9px] uppercase font-bold text-slate-600 mt-0.5">{log.change_type} • delta: {log.quantity_changed}</p>
+                          </div>
+                       </div>
+                       <p className="text-[9px] font-black text-slate-700">{new Date(log.created_at).toLocaleString()}</p>
+                    </div>
+                 ))}
               </div>
            </div>
         )}
