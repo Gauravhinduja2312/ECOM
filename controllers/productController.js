@@ -7,6 +7,65 @@ const {
   isPositiveNumber,
 } = require('../utils/validation');
 
+function normalizeListingDraft(rawDraft) {
+  if (!rawDraft || typeof rawDraft !== 'object') {
+    throw new Error('Invalid listing payload');
+  }
+
+  const name = String(rawDraft.name || '').trim();
+  const description = String(rawDraft.description || '').trim();
+  const category = String(rawDraft.category || '').trim();
+  const imageUrl = String(rawDraft.image_url || '').trim();
+  const price = Number(rawDraft.price);
+  const stock = Number(rawDraft.stock);
+  const isSponsored = Boolean(rawDraft.is_sponsored);
+
+  if (!isNonEmptyStringWithMaxLength(name, 120)) {
+    throw new Error('Product name is required (max 120 chars)');
+  }
+
+  if (!isNonEmptyStringWithMaxLength(description, 1000)) {
+    throw new Error('Description is required (max 1000 chars)');
+  }
+
+  if (!isNonEmptyStringWithMaxLength(category, 80)) {
+    throw new Error('Category is required (max 80 chars)');
+  }
+
+  if (imageUrl && !isNonEmptyStringWithMaxLength(imageUrl, 1000)) {
+    throw new Error('Invalid image URL');
+  }
+
+  if (!isPositiveNumber(price) || price > 100000) {
+    throw new Error('Invalid price amount');
+  }
+
+  if (!isIntegerInRange(stock, 1, 10000)) {
+    throw new Error('Stock must be between 1 and 10000');
+  }
+
+  return {
+    name,
+    description,
+    category,
+    image_url: imageUrl,
+    price,
+    stock,
+    is_sponsored: isSponsored,
+  };
+}
+
+function buildListingInsertPayload(draft, userId) {
+  return {
+    ...draft,
+    seller_id: userId,
+    verification_status: 'pending',
+    price_offer_status: 'none',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+}
+
 async function storeProductOffer(req, res) {
   try {
     const draft = normalizeListingDraft(req.body?.listingDraft);
