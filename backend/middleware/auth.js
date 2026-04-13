@@ -36,4 +36,15 @@ async function requireAuth(req, res, next) {
   next();
 }
 
-module.exports = { requireAuth };
+async function requireAdmin(req, res, next) {
+  // requireAdmin assumes requireAuth was called before it
+  if (!req.user || !req.user.is_admin) {
+    return res.status(403).json({ error: 'Admin access required' });
+  }
+  next();
+}
+
+module.exports = { 
+  requireAuth,
+  requireAdmin
+};
