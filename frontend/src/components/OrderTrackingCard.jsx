@@ -191,15 +191,16 @@ export default function OrderTrackingCard({ order, isExpandable = true }) {
           {isReturning && (
             <div className="mt-8 p-6 rounded-3xl bg-rose-600/5 border border-rose-500/10 space-y-4">
               <h4 className="text-[10px] font-black uppercase tracking-widest text-rose-400">Request Return</h4>
-              <textarea
+               <textarea
                 value={returnReason}
                 onChange={(e) => setReturnReason(e.target.value)}
-                className="elite-input text-xs py-3 text-rose-950"
+                className="w-full rounded-2xl bg-white border-2 border-rose-100 p-4 text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:border-rose-300 focus:outline-none transition-all"
                 placeholder="Reason for return (e.g., Wrong size, Damaged)..."
+                rows={3}
               />
               <div className="flex gap-2">
                 <button 
-                  onClick={() => handleReturn(order.items[0]?.product_id)} 
+                  onClick={() => handleReturn(order.items[0]?.id)} 
                   disabled={loading} 
                   className="btn-elite flex-1 py-3 text-[9px] bg-rose-600 border-rose-500/20"
                 >
