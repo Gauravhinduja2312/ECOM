@@ -184,34 +184,84 @@ export default function AdminDashboardPage() {
         )}
 
         {activeTab === 'scm' && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 min-h-[600px] animate-in slide-in-from-bottom-5 duration-500">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 min-h-[600px] animate-in slide-in-from-bottom-8 duration-700">
              {[
-               { id: 'pending', label: 'New Submissions', items: submissions.filter(s => s.verification_status === 'pending') },
-               { id: 'prep', label: 'Handover Pipeline', items: submissions.filter(s => s.verification_status === 'verified' && s.handover_status !== 'confirmed') },
-               { id: 'active', label: 'Active Inventory', items: submissions.filter(s => s.handover_status === 'confirmed') },
-               { id: 'reject', label: 'Rejection Bin', items: submissions.filter(s => s.verification_status === 'rejected') },
+               { id: 'pending', label: 'New Submissions', color: 'indigo', icon: '📥', items: submissions.filter(s => s.verification_status === 'pending') },
+               { id: 'prep', label: 'Handover Pipeline', color: 'amber', icon: '🤝', items: submissions.filter(s => s.verification_status === 'verified' && s.handover_status !== 'confirmed') },
+               { id: 'active', label: 'Active Inventory', color: 'emerald', icon: '✅', items: submissions.filter(s => s.handover_status === 'confirmed') },
+               { id: 'reject', label: 'Rejection Bin', color: 'rose', icon: '🗑️', items: submissions.filter(s => s.verification_status === 'rejected') },
              ].map(col => (
-               <div key={col.id} className="flex flex-col gap-4">
-                  <div className="flex justify-between items-center px-2 mb-2">
-                    <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500">{col.label}</h3>
-                    <span className="text-[9px] bg-white/5 px-2 py-0.5 rounded text-slate-400 font-bold">{col.items.length}</span>
-                  </div>
-                  {col.items.length > 0 ? col.items.map(p => (
-                    <div key={p.id} className="glass-card p-6 border border-white/5 hover:border-indigo-500/20 transition-all group">
-                      <p className="text-sm font-black uppercase tracking-tight truncate">{p.name}</p>
-                      <p className="text-[9px] text-indigo-400 mt-1 font-black">₹{p.price} • {p.seller_email}</p>
-                      <div className="mt-4 pt-4 border-t border-white/5 flex gap-2">
-                        {p.verification_status === 'pending' && (
-                          <button onClick={() => handleReview(p.id, 'verify')} className="flex-1 py-2 bg-indigo-600 rounded-xl text-[9px] font-black tracking-widest uppercase">Verify</button>
-                        )}
-                        {p.verification_status === 'verified' && p.handover_status !== 'confirmed' && (
-                             <div className="w-full text-center py-2 bg-amber-500/10 text-amber-500 rounded-xl text-[9px] font-black uppercase tracking-widest">Awaiting Handover</div>
-                        )}
-                      </div>
+               <div key={col.id} className="flex flex-col gap-6 relative">
+                  {/* Column Header */}
+                  <div className="flex justify-between items-center px-4 py-3 rounded-2xl bg-white/[0.02] border border-white/5 shadow-inner">
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm">{col.icon}</span>
+                      <h3 className={`text-[10px] font-black uppercase tracking-[0.2em] text-${col.color}-400`}>{col.label}</h3>
                     </div>
-                  )) : (
-                    <p className="text-[9px] font-black uppercase text-slate-700 text-center py-10 tracking-widest opacity-30">NO DATA</p>
-                  )}
+                    <span className={`text-[10px] font-black bg-${col.color}-500/20 px-2.5 py-1 rounded-lg text-${col.color}-400 border border-${col.color}-500/20`}>{col.items.length}</span>
+                  </div>
+
+                  {/* Items Container */}
+                  <div className="flex-1 space-y-5">
+                    {col.items.length > 0 ? col.items.map(p => (
+                      <div key={p.id} className="glass-card group p-6 border border-white/5 hover:border-indigo-500/30 transition-all duration-500 relative overflow-hidden">
+                        {/* Status Accent Glow */}
+                        <div className={`absolute -right-10 -top-10 w-24 h-24 bg-${col.color}-500/5 blur-2xl group-hover:opacity-100 transition-opacity`} />
+                        
+                        <div className="relative z-10">
+                          <div className="flex justify-between items-start mb-4">
+                            <div>
+                              <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1">SKU: {p.id.toString().padStart(6, '0')}</p>
+                              <h4 className="text-sm font-black text-white group-hover:text-indigo-400 transition-colors uppercase leading-tight">{p.name}</h4>
+                            </div>
+                            <p className="text-xs font-black text-indigo-400">₹{p.price}</p>
+                          </div>
+
+                          <div className="space-y-3 py-4 border-y border-white/5 mb-4">
+                            <div className="flex items-center gap-2">
+                              <div className="h-1 w-1 rounded-full bg-slate-500" />
+                              <p className="text-[9px] font-bold text-slate-400 truncate uppercase tracking-widest">{p.seller_email}</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <div className="h-1 w-1 rounded-full bg-slate-500" />
+                              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Added {new Date(p.created_at).toLocaleDateString()}</p>
+                            </div>
+                          </div>
+
+                          <div className="flex gap-2 mt-auto">
+                            {p.verification_status === 'pending' && (
+                              <button 
+                                onClick={() => handleReview(p.id, 'verify')} 
+                                className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 rounded-xl text-[9px] font-black tracking-[0.2em] uppercase transition-all shadow-lg shadow-indigo-600/20 active:scale-95"
+                              >
+                                VERIFY SHIPMENT
+                              </button>
+                            )}
+                            {p.verification_status === 'verified' && p.handover_status !== 'confirmed' && (
+                              <div className="w-full text-center py-3 bg-amber-500/10 border border-amber-500/20 text-amber-500 rounded-xl text-[9px] font-black uppercase tracking-[0.2em] italic">
+                                IN TRANSIT...
+                              </div>
+                            )}
+                            {p.handover_status === 'confirmed' && (
+                               <div className="w-full text-center py-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-xl text-[9px] font-black uppercase tracking-[0.2em]">
+                                LIVE ON RETAIL
+                               </div>
+                            )}
+                            {p.verification_status === 'rejected' && (
+                               <div className="w-full text-center py-3 bg-rose-500/10 border border-rose-500/20 text-rose-400 rounded-xl text-[9px] font-black uppercase tracking-[0.2em]">
+                                REMOVED FROM NETWORK
+                               </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )) : (
+                      <div className="flex flex-col items-center justify-center py-24 opacity-20 group-hover:opacity-40 transition-opacity">
+                        <span className="text-3xl mb-4 grayscale filter">{col.icon}</span>
+                        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">Pipeline Empty</p>
+                      </div>
+                    )}
+                  </div>
                </div>
              ))}
           </div>

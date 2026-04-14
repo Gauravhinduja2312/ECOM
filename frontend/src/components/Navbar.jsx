@@ -47,18 +47,20 @@ export default function Navbar() {
             Shop <span className="text-indigo-500 transition-transform group-hover:translate-x-1">→</span>
           </Link>
 
-          <Link
-            to="/cart"
-            onMouseEnter={preloadCartPage}
-            className="group relative flex items-center justify-center h-10 w-10 rounded-xl bg-white/5 border border-white/5 hover:bg-white/10 hover:border-indigo-500/30 transition shadow-inner"
-          >
-            <span className="text-lg">🛒</span>
-            {items.length > 0 && (
-              <span className="absolute -top-2 -right-2 h-4 w-4 rounded-full bg-indigo-600 text-[9px] font-black flex items-center justify-center text-white shadow-lg animate-pulse">
-                {items.length}
-              </span>
-            )}
-          </Link>
+          {profile?.role !== 'admin' && (
+            <Link
+              to="/cart"
+              onMouseEnter={preloadCartPage}
+              className="group relative flex items-center justify-center h-10 w-10 rounded-xl bg-white/5 border border-white/5 hover:bg-white/10 hover:border-indigo-500/30 transition shadow-inner"
+            >
+              <span className="text-lg">🛒</span>
+              {items.length > 0 && (
+                <span className="absolute -top-2 -right-2 h-4 w-4 rounded-full bg-indigo-600 text-[9px] font-black flex items-center justify-center text-white shadow-lg animate-pulse">
+                  {items.length}
+                </span>
+              )}
+            </Link>
+          )}
 
           {profile ? (
             <div className="flex items-center gap-3 ml-4 pl-4 border-l border-white/5">

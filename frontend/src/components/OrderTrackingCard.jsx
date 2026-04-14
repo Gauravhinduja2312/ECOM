@@ -194,7 +194,7 @@ export default function OrderTrackingCard({ order, isExpandable = true }) {
               <textarea
                 value={returnReason}
                 onChange={(e) => setReturnReason(e.target.value)}
-                className="elite-input text-xs py-3"
+                className="elite-input text-xs py-3 text-rose-950"
                 placeholder="Reason for return (e.g., Wrong size, Damaged)..."
               />
               <div className="flex gap-2">

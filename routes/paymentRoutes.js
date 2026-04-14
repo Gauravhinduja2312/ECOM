@@ -7,6 +7,8 @@ const {
   getOrderDetails,
   getSellerOrders,
   confirmPickup,
+  rescheduleOrder,
+  initiateReturn,
 } = require('../controllers/paymentController');
 const { requireAuth } = require('../middleware/auth');
 const { createOrderLimiter, verifyPaymentLimiter } = require('../middleware/rateLimit');
@@ -22,5 +24,7 @@ router.patch('/orders/:orderId/status', requireAuth, updateOrderStatus);
 // Seller endpoints
 router.get('/seller-orders', requireAuth, getSellerOrders);
 router.patch('/orders/:orderId/pickup/confirm', requireAuth, confirmPickup);
+router.patch('/orders/:orderId/reschedule', requireAuth, rescheduleOrder);
+router.post('/orders/return', requireAuth, initiateReturn);
 
 module.exports = router;
