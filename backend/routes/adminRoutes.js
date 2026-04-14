@@ -7,6 +7,7 @@ const {
   markSellerPayoutsPaid,
   updateOrderStatus,
   getOrders,
+  verifyHandoverCode,
 } = require('../controllers/adminController');
 const { acquireProductInventory } = require('../controllers/productController');
 const { requireAuth } = require('../middleware/auth');
@@ -46,5 +47,6 @@ router.patch('/seller-payouts/:sellerId/mark-paid', requireAuth, requireAdmin, m
 router.patch('/orders/:orderId/status', requireAuth, requireAdmin, updateOrderStatus);
 router.get('/orders', requireAuth, requireAdmin, getOrders);
 router.patch('/products/:productId/acquire', requireAuth, requireAdmin, acquireProductInventory);
+router.post('/verify-handover', requireAuth, requireAdmin, verifyHandoverCode);
 
 module.exports = router;

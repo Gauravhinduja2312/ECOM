@@ -238,8 +238,33 @@ export default function AdminDashboardPage() {
                               </button>
                             )}
                             {p.verification_status === 'verified' && p.handover_status !== 'confirmed' && (
-                              <div className="w-full text-center py-3 bg-amber-500/10 border border-amber-500/20 text-amber-500 rounded-xl text-[9px] font-black uppercase tracking-[0.2em] italic">
-                                IN TRANSIT...
+                              <div className="w-full space-y-2">
+                                <div className="flex gap-2">
+                                  <input
+                                    type="text"
+                                    id={`handover-code-${p.id}`}
+                                    placeholder="ENTER CODE"
+                                    maxLength={6}
+                                    className="elite-input flex-1 py-2.5 px-3 text-[10px] font-black uppercase tracking-widest text-center rounded-xl bg-[#0f172a]"
+                                  />
+                                  <button
+                                    onClick={async () => {
+                                      const code = document.getElementById(`handover-code-${p.id}`).value.trim();
+                                      if (!code) { addToast('Enter the handover code.', 'error'); return; }
+                                      try {
+                                        await apiRequest('/api/admin/verify-handover', 'POST', session.access_token, { productId: p.id, code });
+                                        addToast('Handover verified! Item moved to Active Inventory.', 'success');
+                                        fetchData();
+                                      } catch (e) {
+                                        addToast(e.message || 'Invalid code', 'error');
+                                      }
+                                    }}
+                                    className="px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-black rounded-xl text-[9px] font-black tracking-[0.15em] uppercase transition-all active:scale-95 shadow-lg shadow-amber-500/20"
+                                  >
+                                    VERIFY
+                                  </button>
+                                </div>
+                                <p className="text-[8px] text-amber-500/60 font-bold uppercase tracking-widest text-center">Awaiting physical handover code</p>
                               </div>
                             )}
                             {p.handover_status === 'confirmed' && (

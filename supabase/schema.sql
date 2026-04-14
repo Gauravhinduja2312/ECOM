@@ -64,6 +64,7 @@ alter table public.products add column if not exists listing_fee numeric(10,2) n
 alter table public.products add column if not exists seller_pickup_location text;
 alter table public.products add column if not exists seller_pickup_time timestamptz;
 alter table public.products add column if not exists handover_status text not null default 'pending';
+alter table public.products add column if not exists handover_code text;
 alter table public.products add column if not exists is_sponsored boolean not null default false;
 alter table public.products add column if not exists sponsored_fee numeric(10,2) not null default 0 check (sponsored_fee >= 0);
 alter table public.products add column if not exists sponsored_until timestamptz;
