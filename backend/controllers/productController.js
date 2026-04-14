@@ -358,5 +358,4 @@ module.exports = {
   getRecommendedProducts,
   getLowStockProducts,
   acquireProductInventory,
-  updateHandoverDetails,
 };
