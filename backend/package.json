@@ -12,7 +12,7 @@
   "license": "ISC",
   "type": "commonjs",
   "engines": {
-    "node": ">=18.0.0"
+    "node": "20.x"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",
@@ -24,3 +24,4 @@
     "socket.io": "^4.7.5"
   }
 }
+

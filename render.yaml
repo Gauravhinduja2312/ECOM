@@ -3,9 +3,10 @@ services:
     name: student-marketplace-backend
     runtime: node
     rootDir: backend
-    buildCommand: npm install
+    buildCommand: npm ci
     startCommand: npm start
     plan: free
+    nodeVersion: 20.19.0
     envVars:
       - key: NODE_ENV
         value: production
